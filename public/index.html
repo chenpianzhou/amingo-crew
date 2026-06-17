@@ -231,7 +231,7 @@ function enterApp(){
 // ═══ FEED ═══
 function refreshFeed(){
   if(!crewId)return;
-  fetch(`/api/crew/${crewId}`).then(r=>r.json()).then(data=>{
+  fetch(`/api/crew/${crewId}`).then(r=>r.json()).then(data=>{console.log('[refreshFeed] clips:', data.clips?.length, 'members:', data.members?.length);
     // Members line
     const others=data.members.filter(m=>m.id!==memberId).map(m=>'<b>'+m.name+'</b>');
     document.getElementById('members-line').innerHTML=others.length?others.join(' & ')+' in your crew':'just you so far — invite friends!';
@@ -303,7 +303,7 @@ function toggleRec(){
     try{recorder=new MediaRecorder(camStream);}catch(e){recorder=new MediaRecorder(camStream,{mimeType:'video/webm'});}
     recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
     recorder.onstop=()=>{console.log('[rec] stopped, chunks:',chunks.length);capturedBlob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});console.log('[rec] blob size:',capturedBlob.size);processCapture();};
-    recorder.start(100);console.log('[rec] started');
+    recorder.start(200); console.log('[rec] started, state:', recorder.state);console.log('[rec] started');
     recTimer=setTimeout(toggleRec,3000);
   }else{
     isRecording=false;clearTimeout(recTimer);clearInterval(recInterval);
@@ -335,7 +335,7 @@ function showCategoryPicker(videoUrl){
   const cf = document.getElementById('confirm');
   document.getElementById('cf-preview').innerHTML='<video src="'+videoUrl+'" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></video>';
   cf.style.display='flex'; cf.classList.add('show');
-  
+  console.log('[showCategoryPicker] confirm overlay shown');
   // Grab thumbnail in background
   const vid = document.createElement('video');
   vid.muted=true; vid.playsInline=true; vid.autoplay=true;
@@ -459,8 +459,9 @@ function guessEmoji(text){
 }
 
 async function confirmClip(category){
+  console.log('[confirmClip] called, category:', category, 'blob:', capturedBlob?.size);
   document.getElementById('confirm').classList.remove('show');document.getElementById('confirm').style.display='none';
-  if(!capturedBlob) return;
+  if(!capturedBlob){ console.log('[confirmClip] NO BLOB!'); return; }
 
   // Upload
   const form=new FormData();
@@ -468,7 +469,9 @@ async function confirmClip(category){
   form.append('memberId',memberId);
   form.append('thumb',capturedThumb||'');
   if(category){form.append('category',category.name);form.append('emoji',category.emoji);}
-  await fetch(`/api/crew/${crewId}/clip`,{method:'POST',body:form});
+  const uploadRes = await fetch(`/api/crew/${crewId}/clip`,{method:'POST',body:form});
+  const uploadData = await uploadRes.json();
+  console.log('[confirmClip] upload response:', uploadData);
 
   // Nudge crew if a category was picked
   if(category){
@@ -478,7 +481,8 @@ async function confirmClip(category){
     toast('saved ✓');
   }
   capturedBlob=null;capturedThumb=null;pendingCategory=null;
-  refreshFeed();
+  console.log('[confirmClip] done, refreshing feed');
+  setTimeout(refreshFeed, 500);
 }
 
 // ═══ NUDGE POLLING ═══
