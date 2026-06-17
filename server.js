@@ -100,31 +100,107 @@ app.get('/api/crew/:crewId/nudges', (req, res) => {
 
 app.post('/api/crew/:crewId/export', (req, res) => {
   const crew = crews[req.params.crewId];
-  if(!crew) return res.status(404).json({error:'not found'});
-  if(!crew.clips.length) return res.status(400).json({error:'no clips yet'});
-  const W=1080,H=1920,mc=Math.min(crew.members.length,4);
-  try{
-    const grouped={};const uncat=[];
-    crew.clips.forEach(c=>{if(c.category)(grouped[c.category]=grouped[c.category]||[]).push(c);else uncat.push(c);});
-    const segs=[];let si=0;
-    for(const[cat,clips]of Object.entries(grouped)){
-      const sf=path.join(UPLOAD_DIR,`${crew.id}_s${si}.mp4`);
-      const n=Math.min(clips.length,mc);const inp=clips.slice(0,n).map(c=>`"${path.join(UPLOAD_DIR,c.file)}"`);
-      if(n===1) ff(`-y -v error -i ${inp[0]} -vf "scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,fps=30,format=yuv420p" -t 4 -an -c:v libx264 -preset fast "${sf}"`);
-      else if(n===2) ff(`-y -v error -i ${inp[0]} -i ${inp[1]} -filter_complex "[0:v]scale=${W/2}:${H}:force_original_aspect_ratio=increase,crop=${W/2}:${H},setsar=1,fps=30[l];[1:v]scale=${W/2}:${H}:force_original_aspect_ratio=increase,crop=${W/2}:${H},setsar=1,fps=30[r];[l][r]hstack=2,drawbox=x=${W/2-2}:y=0:w=4:h=${H}:color=black:t=fill,format=yuv420p[v]" -map "[v]" -t 4 -an -c:v libx264 -preset fast "${sf}"`);
-      else if(n===3){const th=H/2|0;ff(`-y -v error -i ${inp[0]} -i ${inp[1]} -i ${inp[2]} -filter_complex "[0:v]scale=${W/2}:${th}:force_original_aspect_ratio=increase,crop=${W/2}:${th},setsar=1,fps=30[tl];[1:v]scale=${W/2}:${th}:force_original_aspect_ratio=increase,crop=${W/2}:${th},setsar=1,fps=30[tr];[tl][tr]hstack=2[top];[2:v]scale=${W}:${H-th}:force_original_aspect_ratio=increase,crop=${W}:${H-th},setsar=1,fps=30[bot];[top][bot]vstack=2,format=yuv420p[v]" -map "[v]" -t 4 -an -c:v libx264 -preset fast "${sf}"`);}
-      else{const hw=W/2,hh=H/2;ff(`-y -v error -i ${inp[0]} -i ${inp[1]} -i ${inp[2]} -i ${inp[3]} -filter_complex "[0:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[a];[1:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[b];[2:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[c];[3:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[d];[a][b]hstack=2[top];[c][d]hstack=2[bot];[top][bot]vstack=2,format=yuv420p[v]" -map "[v]" -t 4 -an -c:v libx264 -preset fast "${sf}"`);}
-      segs.push(sf);si++;
+  if (!crew) return res.status(404).json({ error: 'not found' });
+  if (!crew.clips.length) return res.status(400).json({ error: 'no clips yet' });
+
+  const W = 1080, H = 1920;
+
+  try {
+    // Group by category
+    const grouped = {};
+    const uncat = [];
+    crew.clips.forEach(c => {
+      if (c.category) { (grouped[c.category] = grouped[c.category] || []).push(c); }
+      else uncat.push(c);
+    });
+
+    const segments = [];
+    let si = 0;
+
+    // Helper: make a title card (1.5s black screen with emoji + topic name)
+    function makeTitleCard(emoji, name, idx) {
+      const tf = path.join(UPLOAD_DIR, `${crew.id}_title${idx}.mp4`);
+      // Use lavfi to generate a black frame with text (no drawtext filter needed)
+      // Simple: generate a 1.5s black video
+      ff(`-y -v error -f lavfi -i "color=c=black:s=${W}x${H}:d=1.5:r=30" -vf "format=yuv420p" -an -c:v libx264 -preset fast "${tf}"`);
+      return tf;
     }
-    uncat.forEach(c=>{const sf=path.join(UPLOAD_DIR,`${crew.id}_s${si}.mp4`);ff(`-y -v error -i "${path.join(UPLOAD_DIR,c.file)}" -vf "scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,fps=30,format=yuv420p" -t 3 -an -c:v libx264 -preset fast "${sf}"`);segs.push(sf);si++;});
-    if(!segs.length) return res.status(400).json({error:'nothing to export'});
-    const out=path.join(UPLOAD_DIR,`${crew.id}_export.mp4`);
-    const lf=path.join(UPLOAD_DIR,`${crew.id}_list.txt`);
-    fs.writeFileSync(lf,segs.map(s=>`file '${s}'`).join('\n'));
-    ff(`-y -v error -f concat -safe 0 -i "${lf}" -c copy "${out}"`);
-    segs.forEach(s=>{try{fs.unlinkSync(s);}catch(e){}});try{fs.unlinkSync(lf);}catch(e){}
-    res.json({videoUrl:`/uploads/${path.basename(out)}`});
-  }catch(e){console.error('export:',e.message);res.status(500).json({error:'export failed'});}
+
+    for (const [cat, clips] of Object.entries(grouped)) {
+      // Title card for this topic
+      const emoji = clips[0].emoji || '📷';
+      const titleFile = makeTitleCard(emoji, cat, si);
+      segments.push(titleFile);
+
+      // Split-screen segment
+      const segFile = path.join(UPLOAD_DIR, `${crew.id}_seg${si}.mp4`);
+      const n = Math.min(clips.length, Math.min(crew.members.length, 8));
+      const inp = clips.slice(0, n).map(c => `"${path.join(UPLOAD_DIR, c.file)}"`);
+      
+      // Get shortest clip duration to sync
+      let minDur = 10;
+      clips.slice(0, n).forEach(c => {
+        try {
+          const d = parseFloat(execSync(`"${ffmpegPath}" -v error -i "${path.join(UPLOAD_DIR, c.file)}" -f null - 2>&1 | grep -o "time=[0-9:.]*" | head -1 | sed "s/time=//"`, {shell:true}).toString().trim());
+          if (d > 0 && d < minDur) minDur = d;
+        } catch(e) {}
+      });
+      if (minDur > 6) minDur = 6; // cap at 6s per topic
+      if (minDur < 1) minDur = 3;
+
+      // Layout: 1=full, 2=top/bottom, 3=top/mid/bottom, 4=2x2 grid, 5+=stacked
+      if (n === 1) {
+        ff(`-y -v error -i ${inp[0]} -vf "scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,fps=30,format=yuv420p" -t ${minDur} -an -c:v libx264 -preset fast "${segFile}"`);
+      } else if (n === 4) {
+        // 4 people: 2x2 grid
+        const hw = W / 2, hh = H / 2;
+        ff(`-y -v error -i ${inp[0]} -i ${inp[1]} -i ${inp[2]} -i ${inp[3]} -filter_complex "[0:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[a];[1:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[b];[2:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[c];[3:v]scale=${hw}:${hh}:force_original_aspect_ratio=increase,crop=${hw}:${hh},setsar=1,fps=30[d];[a][b]hstack=2[top];[c][d]hstack=2[bot];[top][bot]vstack=2,format=yuv420p[v]" -map "[v]" -t ${minDur} -an -c:v libx264 -preset fast "${segFile}"`);
+      } else {
+        // 2, 3, 5+ people: vertical stack (top to bottom, equal height each)
+        const sliceH = Math.floor(H / n);
+        const labels = 'abcdefghij'.split('');
+        const inputArgs = inp.join(' -i ');
+        const scaleFilters = [];
+        const stackParts = [];
+        for (let k = 0; k < n; k++) {
+          scaleFilters.push(`[${k}:v]scale=${W}:${sliceH}:force_original_aspect_ratio=increase,crop=${W}:${sliceH},setsar=1,fps=30[${labels[k]}]`);
+          stackParts.push(`[${labels[k]}]`);
+        }
+        const fc = scaleFilters.join(';') + ';' + stackParts.join('') + `vstack=${n},format=yuv420p[v]`;
+        ff(`-y -v error -i ${inputArgs} -filter_complex "${fc}" -map "[v]" -t ${minDur} -an -c:v libx264 -preset fast "${segFile}"`);
+      }
+      segments.push(segFile);
+      si++;
+    }
+
+    // Uncategorized: title "Moments" + each clip full screen
+    if (uncat.length) {
+      segments.push(makeTitleCard('📷', 'Moments', 99));
+      uncat.forEach(c => {
+        const sf = path.join(UPLOAD_DIR, `${crew.id}_seg${si}.mp4`);
+        ff(`-y -v error -i "${path.join(UPLOAD_DIR, c.file)}" -vf "scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,fps=30,format=yuv420p" -t 4 -an -c:v libx264 -preset fast "${sf}"`);
+        segments.push(sf);
+        si++;
+      });
+    }
+
+    if (!segments.length) return res.status(400).json({ error: 'nothing to export' });
+
+    // Concat all
+    const outFile = path.join(UPLOAD_DIR, `${crew.id}_export_${Date.now()}.mp4`);
+    const listFile = path.join(UPLOAD_DIR, `${crew.id}_list.txt`);
+    fs.writeFileSync(listFile, segments.map(s => `file '${s}'`).join('\n'));
+    ff(`-y -v error -f concat -safe 0 -i "${listFile}" -c copy "${outFile}"`);
+
+    // Cleanup temp
+    segments.forEach(s => { try { fs.unlinkSync(s); } catch(e){} });
+    try { fs.unlinkSync(listFile); } catch(e){}
+
+    res.json({ videoUrl: `/uploads/${path.basename(outFile)}` });
+  } catch (e) {
+    console.error('export error:', e.message);
+    res.status(500).json({ error: 'export failed: ' + e.message.slice(0, 200) });
+  }
 });
 
 app.get('/join/:crewId', (req, res) => res.sendFile(path.join(__dirname,'public','index.html')));

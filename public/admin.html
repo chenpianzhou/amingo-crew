@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMINGO · Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0a0a0c;color:#fff;font-family:-apple-system,sans-serif;padding:20px;max-width:600px;margin:0 auto;}
+h1{font-size:22px;margin-bottom:6px;}
+.sub{font-size:13px;color:#888;margin-bottom:20px;}
+.clip-row{display:flex;align-items:center;gap:12px;padding:12px;background:#151517;border-radius:12px;margin-bottom:8px;}
+.clip-row img{width:60px;height:80px;border-radius:8px;object-fit:cover;background:#222;}
+.clip-info{flex:1;}
+.clip-name{font-weight:700;font-size:14px;}
+.clip-cat{font-size:12px;color:#888;margin-top:2px;}
+.clip-time{font-size:11px;color:#555;margin-top:2px;}
+.dl-btn{background:#C7F141;color:#000;font-weight:700;font-size:12px;padding:8px 14px;border-radius:12px;text-decoration:none;flex-shrink:0;}
+.dl-all{display:inline-block;background:#C7F141;color:#000;font-weight:700;font-size:14px;padding:12px 24px;border-radius:16px;text-decoration:none;margin-bottom:20px;cursor:pointer;border:none;}
+#clips{display:flex;flex-direction:column;gap:6px;}
+</style>
+</head>
+<body>
+<h1>🎯 Admin — Download All Clips</h1>
+<div class="sub" id="info">loading...</div>
+<div id="clips"></div>
+<script>
+const crewId = new URLSearchParams(location.search).get('crew');
+if(!crewId){ document.getElementById('info').textContent='add ?crew=CREWID to URL'; }
+else {
+  fetch(`/api/crew/${crewId}`).then(r=>r.json()).then(data=>{
+    if(data.error){ document.getElementById('info').textContent=data.error; return; }
+    document.getElementById('info').textContent=`${data.members.length} members · ${data.clips.length} clips`;
+    const el = document.getElementById('clips');
+    if(!data.clips.length){ el.innerHTML='<div style="color:#555">no clips yet</div>'; return; }
+    data.clips.forEach(c=>{
+      const ago = Math.floor((Date.now()-c.ts)/60000);
+      const timeStr = ago<60 ? ago+'m ago' : Math.floor(ago/60)+'h ago';
+      el.innerHTML += `<div class="clip-row">
+        ${c.thumb ? `<img src="${c.thumb}">` : '<div style="width:60px;height:80px;background:#222;border-radius:8px;"></div>'}
+        <div class="clip-info">
+          <div class="clip-name">${c.memberName}</div>
+          <div class="clip-cat">${c.emoji||''} ${c.category||'moment'}</div>
+          <div class="clip-time">${timeStr}</div>
+        </div>
+        <a class="dl-btn" href="/api/crew/${crewId}/download/${c.id}">⬇ download</a>
+      </div>`;
+    });
+  });
+}
+</script>
+</body>
+</html>

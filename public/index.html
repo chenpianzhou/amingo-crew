@@ -124,7 +124,7 @@ html,body{height:100%;background:var(--ink);font-family:'Rubik',sans-serif;color
   <div id="topbar" style="display:none;">
     <div id="logo">AM<span>I</span>NGO</div>
   </div>
-  <div id="crew-info" style="display:none;"><span id="members-line"></span><span id="share-btn" onclick="shareCrew()">invite +</span></div>
+  <div id="crew-info" style="display:none;"><span id="members-line"></span><span id="share-btn" onclick="shareCrew()">invite +</span><span id="admin-link" style="margin-left:8px;font-size:10px;color:rgba(255,255,255,.2);cursor:pointer;" onclick="openAdmin()"></span></div>
   <div id="feed" style="display:none;">
     <div id="empty"><div class="e-icon">📷</div><div class="e-title">nothing here yet</div><div class="e-sub">film something — migo will sort it<br>and nudge your crew</div></div>
   </div>
@@ -205,6 +205,12 @@ if(pathMatch){
   document.getElementById('ob-create').textContent='JOIN CREW';
   document.getElementById('ob-or-text').textContent='joining a friend\'s crew...';
   document.getElementById('ob-create').onclick=()=>joinCrew(pathMatch[1]);
+  // Fetch crew info to show who invited them
+  fetch('/api/crew/'+pathMatch[1]).then(r=>r.json()).then(d=>{
+    if(d.members && d.members.length){
+      document.getElementById('ob-or-text').textContent=d.members[0].name+'\'s crew · '+d.clips.length+' clips so far';
+    }
+  }).catch(()=>{});
 }
 function createCrew(){
   myName=document.getElementById('ob-name').value.trim()||'me';
@@ -218,7 +224,9 @@ function joinCrew(id){
 }
 
 // ═══ ENTER APP ═══
+function openAdmin(){ window.open('/admin.html?crew='+crewId, '_blank'); }
 function enterApp(){
+  document.getElementById('admin-link').textContent='id:'+crewId;
   document.getElementById('onboard').classList.add('hidden');
   document.getElementById('topbar').style.display='';
   document.getElementById('crew-info').style.display='';
@@ -251,7 +259,7 @@ function refreshFeed(){
         const ago=timeAgo(c.ts);
         html+=`<div class="clip" onclick="playClip('${c.videoUrl}')">`;
         if(c.thumb) html+=`<img src="${c.thumb}" alt="">`;
-        html+=`<div class="clip-name">${isMe?'you':c.memberName}</div><div class="clip-time">${ago}</div><a href="/api/crew/${crewId}/download/${c.id}" style="position:absolute;bottom:5px;right:7px;font-size:9px;color:rgba(255,255,255,.6);z-index:2;text-decoration:none;" title="download">⬇</a></div>`;
+        html+=`<div class="clip-name">${isMe?'you':c.memberName}</div><div class="clip-time">${ago}</div></div>`;
       });
       html+=`</div></div>`;
     }
@@ -261,7 +269,7 @@ function refreshFeed(){
         const isMe=c.memberId===memberId;const ago=timeAgo(c.ts);
         html+=`<div class="clip" onclick="playClip('${c.videoUrl}')">`;
         if(c.thumb) html+=`<img src="${c.thumb}" alt="">`;
-        html+=`<div class="clip-name">${isMe?'you':c.memberName}</div><div class="clip-time">${ago}</div><a href="/api/crew/${crewId}/download/${c.id}" style="position:absolute;bottom:5px;right:7px;font-size:9px;color:rgba(255,255,255,.6);z-index:2;text-decoration:none;" title="download">⬇</a></div>`;
+        html+=`<div class="clip-name">${isMe?'you':c.memberName}</div><div class="clip-time">${ago}</div></div>`;
       });
       html+=`</div></div>`;
     }
