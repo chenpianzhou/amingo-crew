@@ -5,3 +5,7 @@ exports/
 .vercel
 crews.json
 excalidraw.log
+.DS_Store
+.playwright-mcp/
+_trash/
+public/index_backup.html

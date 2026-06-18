@@ -2,7 +2,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const { UPLOAD_DIR, newId } = require('./store');
+const { UPLOAD_DIR, newId, catKey } = require('./store');
 
 let ffmpegPath;
 try { ffmpegPath = require('ffmpeg-static'); } catch (e) { ffmpegPath = 'ffmpeg'; }
@@ -39,7 +39,11 @@ function drawtextChain(inLabel, title, outLabel) {
   return `[${inLabel}]drawtext=fontfile='${FONT}':text='${t}':fontcolor=white:fontsize=46:box=1:boxcolor=black@0.55:boxborderw=18:x=(w-text_w)/2:y=h-120[${outLabel}]`;
 }
 
-function scaleTo(idx, w, h, label) {
+// fit='cover' 铺满裁剪(单条画面)；fit='contain' 完整留白(拼接的宽幅 hstack，避免裁掉两边的人)
+function scaleTo(idx, w, h, label, fit) {
+  if (fit === 'contain') {
+    return `[${idx}:v]scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30[${label}]`;
+  }
   return `[${idx}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,fps=30[${label}]`;
 }
 
@@ -69,22 +73,41 @@ async function buildSegment(clips, title, segFile) {
   const inputs = [];
   picked.forEach(c => { inputs.push('-t', String(SEG), '-i', path.join(UPLOAD_DIR, c.file)); });
 
+  const fitOf = k => picked[k].stitch ? 'contain' : 'cover'; // 拼接格完整留白，单条铺满
   let fc;
   if (n === 1) {
-    fc = scaleTo(0, W, H, 's0') + ';' + drawtextChain('s0', title, 'v');
+    fc = scaleTo(0, W, H, 's0', fitOf(0)) + ';' + drawtextChain('s0', title, 'v');
   } else if (n === 4) {
     const hw = W / 2, hh = H / 2;
-    fc = [scaleTo(0, hw, hh, 'a'), scaleTo(1, hw, hh, 'b'), scaleTo(2, hw, hh, 'c'), scaleTo(3, hw, hh, 'd')].join(';')
+    fc = [scaleTo(0, hw, hh, 'a', fitOf(0)), scaleTo(1, hw, hh, 'b', fitOf(1)), scaleTo(2, hw, hh, 'c', fitOf(2)), scaleTo(3, hw, hh, 'd', fitOf(3))].join(';')
       + ';[a][b]hstack=2[top];[c][d]hstack=2[bot];[top][bot]vstack=2[base];' + drawtextChain('base', title, 'v');
   } else {
     const sliceH = Math.floor(H / n);
     const labels = 'abcdefghij'.split('');
     const scales = [], parts = [];
-    for (let k = 0; k < n; k++) { scales.push(scaleTo(k, W, sliceH, labels[k])); parts.push(`[${labels[k]}]`); }
+    for (let k = 0; k < n; k++) { scales.push(scaleTo(k, W, sliceH, labels[k], fitOf(k))); parts.push(`[${labels[k]}]`); }
     fc = scales.join(';') + ';' + parts.join('') + `vstack=inputs=${n}[base];` + drawtextChain('base', title, 'v');
   }
   await run(['-y', '-v', 'error', ...inputs, '-filter_complex', fc, '-map', '[v]', '-t', String(SEG),
     '-an', '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', segFile]);
+}
+
+// 同一成员同一主题的多条 clip → 横向并排(hstack)成一条，最多 3 条；单格竖版 480x640
+const STITCH_W = 480, STITCH_H = 640, STITCH_CAP = 3;
+async function stitchHorizontal(files, outFile) {
+  const picked = files.slice(0, STITCH_CAP);
+  const n = picked.length;
+  const inputs = [];
+  picked.forEach(f => inputs.push('-t', String(SEG), '-i', path.join(UPLOAD_DIR, f)));
+  const labels = 'abc'.split('');
+  const scales = [], parts = [];
+  for (let k = 0; k < n; k++) {
+    scales.push(`[${k}:v]scale=${STITCH_W}:${STITCH_H}:force_original_aspect_ratio=increase,crop=${STITCH_W}:${STITCH_H},setsar=1,fps=30[${labels[k]}]`);
+    parts.push(`[${labels[k]}]`);
+  }
+  const fc = scales.join(';') + ';' + parts.join('') + `hstack=inputs=${n}[v]`;
+  await run(['-y', '-v', 'error', ...inputs, '-filter_complex', fc, '-map', '[v]', '-t', String(SEG),
+    '-an', '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', outFile]);
 }
 
 // 单条全屏段（Moments，无标题）
@@ -94,14 +117,17 @@ async function buildFullScreen(clip, segFile) {
     '-an', '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', '-t', String(SEG), segFile]);
 }
 
-// 删除该 crew 的旧 export 产物，只留最近 1 个
+// 保留该 crew 最近 KEEP_EXPORTS 个导出产物（分享链接直指这些文件，留几个防一导出就失效），更老的删掉
+const KEEP_EXPORTS = 12;
 function cleanupExports(crewId, keepFile) {
   try {
-    for (const f of fs.readdirSync(UPLOAD_DIR)) {
-      if (f.startsWith(`${crewId}_export_`) && f !== keepFile) {
-        try { fs.unlinkSync(path.join(UPLOAD_DIR, f)); } catch (e) {}
-      }
-    }
+    const files = fs.readdirSync(UPLOAD_DIR)
+      .filter(f => f.startsWith(`${crewId}_export_`))
+      .map(f => ({ f, t: fs.statSync(path.join(UPLOAD_DIR, f)).mtimeMs }))
+      .sort((a, b) => b.t - a.t); // 新→旧
+    const survivors = new Set([keepFile]);
+    for (const { f } of files) if (survivors.size < KEEP_EXPORTS) survivors.add(f);
+    for (const { f } of files) if (!survivors.has(f)) { try { fs.unlinkSync(path.join(UPLOAD_DIR, f)); } catch (e) {} }
   } catch (e) {}
 }
 
@@ -128,8 +154,16 @@ async function _doExport(crew, targetCategory) {
   try {
     let i = 0;
     for (const [cat, clips] of Object.entries(grouped)) {
+      // 每人一格：有拼接(2~3条)用 stitch，否则用该成员最新单条 → 分屏按人数而非 clip 数
+      const byMember = {};
+      clips.forEach(c => (byMember[c.memberId] = byMember[c.memberId] || []).push(c));
+      const entries = Object.keys(byMember).map(mid => {
+        const ms = byMember[mid].sort((a, b) => a.ts - b.ts);
+        const stitch = crew.stitches && crew.stitches[`${mid}|${catKey(cat)}`];
+        return { file: stitch || ms[ms.length - 1].file, stitch: !!stitch };
+      });
       const seg = path.join(UPLOAD_DIR, `${crew.id}_seg_${tag}_${i++}.mp4`);
-      await buildSegment(clips, cat, seg);
+      await buildSegment(entries, cat, seg);
       segments.push(seg);
     }
     if (!targetCategory) {
@@ -168,4 +202,4 @@ function exportCrew(crew, targetCategory) {
   return job;
 }
 
-module.exports = { transcode, exportCrew, FONT };
+module.exports = { transcode, exportCrew, stitchHorizontal, STITCH_CAP, FONT };

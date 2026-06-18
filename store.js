@@ -31,12 +31,15 @@ function clean(s, fallback) {
   return v || fallback;
 }
 
+// 主题名 → 稳定 key（大小写无关、去非字母数字），用于「同一成员同一主题」分组 / stitch 索引
+function catKey(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+
 function getCrew(id) { return crews[id]; }
 
 function createCrew(name) {
   const id = newId(4);
   const memberId = newId(3);
-  crews[id] = { id, members: [{ id: memberId, name: clean(name, 'me') }], clips: [], nudges: [] };
+  crews[id] = { id, members: [{ id: memberId, name: clean(name, 'me') }], clips: [], nudges: [], stitches: {} };
   save();
   return { crew: crews[id], memberId };
 }
@@ -53,6 +56,16 @@ function joinCrew(id, name) {
 
 function addClip(crew, clip) { crew.clips.push(clip); save(); return clip; }
 
+// 删除一条 clip（连同视频文件 + 缩略图），用于「一人一主题一条」覆盖
+function removeClip(crew, clipId) {
+  const idx = crew.clips.findIndex(c => c.id === clipId);
+  if (idx < 0) return;
+  const [c] = crew.clips.splice(idx, 1);
+  try { if (c.file) fs.unlinkSync(path.join(UPLOAD_DIR, c.file)); } catch (e) {}
+  try { if (c.thumb) fs.unlinkSync(path.join(THUMB_DIR, c.thumb)); } catch (e) {}
+  save();
+}
+
 function addNudge(crew, nudge) { crew.nudges.push(nudge); save(); return nudge; }
 
 // 前端抓首帧的 base64 jpeg → 落盘 thumbs/，返回文件名（失败返回 null）
@@ -68,6 +81,6 @@ function saveThumb(crewId, dataUrl) {
 
 module.exports = {
   DATA_DIR, UPLOAD_DIR, THUMB_DIR, DB_FILE, IS_RAILWAY,
-  newId, clean, save, getCrew, createCrew, joinCrew, addClip, addNudge, saveThumb,
+  newId, clean, catKey, save, getCrew, createCrew, joinCrew, addClip, removeClip, addNudge, saveThumb,
   allCrews: () => crews,
 };

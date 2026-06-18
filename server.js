@@ -22,7 +22,11 @@ const upload = multer({
   }),
   limits: { fileSize: 100 * 1024 * 1024, fieldSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (/^video\//.test(file.mimetype)) cb(null, true); // 只收视频
+    // 收视频：优先按 mimetype；浏览器对 blob 不带类型时 busboy 默认 text/plain，
+    // 这种情况按扩展名兜底（前端固定上传 .webm/.mp4），避免误杀真实视频
+    const okMime = /^video\//.test(file.mimetype);
+    const okExt = /\.(webm|mp4|mov|m4v)$/i.test(file.originalname || '') && /^(application\/octet-stream|text\/plain)$/.test(file.mimetype);
+    if (okMime || okExt) cb(null, true);
     else cb(new Error('only video files allowed'));
   },
 });
@@ -48,14 +52,37 @@ app.post('/api/crew/:id/join', (req, res) => {
 app.get('/api/crew/:id', (req, res) => {
   const crew = store.getCrew(req.params.id);
   if (!crew) return res.status(404).json({ error: 'not found' });
-  res.json({ id: crew.id, members: crew.members, clips: crew.clips.map(clipView), nudges: crew.nudges.slice(-20) });
+  const stitches = Object.fromEntries(Object.entries(crew.stitches || {}).map(([k, f]) => [k, `/uploads/${f}`]));
+  res.json({ id: crew.id, members: crew.members, clips: crew.clips.map(clipView), stitches, nudges: crew.nudges.slice(-20) });
 });
 
+// 同一成员同一主题：最多保留最新 3 条，超出删最旧；≥2 条则用 ffmpeg 横向并排拼接成一条
+async function rebuildStitch(crew, memberId, category) {
+  crew.stitches = crew.stitches || {};
+  const key = `${memberId}|${store.catKey(category)}`;
+  let mine = crew.clips.filter(c => c.memberId === memberId && c.category && c.category.toLowerCase() === category.toLowerCase())
+    .sort((a, b) => a.ts - b.ts);
+  while (mine.length > video.STITCH_CAP) { store.removeClip(crew, mine[0].id); mine = mine.slice(1); } // 删最旧
+  const old = crew.stitches[key];
+  if (mine.length >= 2) {
+    const out = `${crew.id}_stitch_${memberId}_${store.catKey(category)}_${store.newId(3)}.mp4`;
+    try {
+      await video.stitchHorizontal(mine.map(c => c.file), require('path').join(store.UPLOAD_DIR, out));
+      crew.stitches[key] = out;
+      if (old && old !== out) { try { require('fs').unlinkSync(require('path').join(store.UPLOAD_DIR, old)); } catch (e) {} }
+    } catch (e) { console.error('[stitch] failed:', e.message); }
+  } else { // 只剩 1 条 → 不需要拼接，清掉旧 stitch
+    if (old) { try { require('fs').unlinkSync(require('path').join(store.UPLOAD_DIR, old)); } catch (e) {} delete crew.stitches[key]; }
+  }
+  store.save();
+}
+
 app.post('/api/crew/:crewId/clip', upload.single('clip'), async (req, res) => {
+  const rmUpload = () => { try { if (req.file) require('fs').unlinkSync(req.file.path); } catch (e) {} }; // multer 先落盘，校验失败要清掉孤儿文件
   const crew = store.getCrew(req.params.crewId);
-  if (!crew) return res.status(404).json({ error: 'crew not found' });
+  if (!crew) { rmUpload(); return res.status(404).json({ error: 'crew not found' }); }
   const member = crew.members.find(m => m.id === req.body.memberId);
-  if (!member) return res.status(400).json({ error: 'not a member' });
+  if (!member) { rmUpload(); return res.status(400).json({ error: 'not a member' }); }
   if (!req.file) return res.status(400).json({ error: 'no clip' });
   try {
     const file = await video.transcode(req.file.path); // 转码失败 → throw，不留坏 clip
@@ -64,12 +91,13 @@ app.post('/api/crew/:crewId/clip', upload.single('clip'), async (req, res) => {
     let category = req.body.category ? store.clean(req.body.category, null) : null;
     if (category) {
       const existing = crew.clips.find(c => c.category && c.category.toLowerCase() === category.toLowerCase());
-      if (existing) category = existing.category;
+      if (existing) category = existing.category; // 复用已有主题的大小写写法
     }
     const clip = store.addClip(crew, {
       id: store.newId(3), memberId: member.id, memberName: member.name,
       file, thumb, category, ts: Date.now(),
     });
+    if (category) await rebuildStitch(crew, member.id, category); // 同人同主题：限 3 条 + 重建并排拼接
     res.json({ ok: true, clip: clipView(clip) });
   } catch (e) {
     console.error('[clip] failed:', e.message);
