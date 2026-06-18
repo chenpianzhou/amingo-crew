@@ -5,69 +5,62 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>AMINGO</title>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
 <style>
-:root{--lime:#C7F141;--ink:#0a0a0c;--red:#EA3829;--card:#131315;}
+:root{--lime:#C7F141;--ink:#0a0a0c;--red:#EA3829;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;background:var(--ink);font-family:'Rubik',sans-serif;color:#fff;}
-#app{max-width:430px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--ink);}
-
-/* ═══ ONBOARDING ═══ */
+html,body{height:100%;background:var(--ink);font-family:'Rubik',sans-serif;color:#fff;overflow:hidden;}
+#app{max-width:430px;margin:0 auto;height:100dvh;position:relative;overflow:hidden;}
 #onboard{position:absolute;inset:0;z-index:100;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;}
 #onboard.hidden{display:none;}
-#onboard h1{font-family:'Anton',sans-serif;font-size:36px;letter-spacing:.02em;}
+#onboard h1{font-family:'Anton',sans-serif;font-size:36px;}
 #onboard h1 span{color:var(--red);font-style:italic;}
-#onboard .sub{font-size:13px;color:#888;text-align:center;}
+#onboard .sub{font-size:13px;color:#888;text-align:center;line-height:1.5;}
 #onboard input{width:100%;max-width:280px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);border-radius:14px;padding:14px 18px;font-size:15px;color:#fff;text-align:center;outline:none;}
-#onboard input::placeholder{color:#555;}
 #onboard input:focus{border-color:var(--lime);}
-.ob-btn{width:100%;max-width:280px;background:var(--lime);color:#000;font-family:'Anton',sans-serif;font-size:18px;letter-spacing:.5px;border:none;padding:16px;border-radius:26px;cursor:pointer;transition:transform .12s;}
-.ob-btn:active{transform:scale(.95);}
-.ob-btn:disabled{opacity:.4;cursor:default;}
-.ob-or{font-size:12px;color:#555;margin:6px 0;}
+.ob-btn{width:100%;max-width:280px;background:var(--lime);color:#000;font-family:'Anton',sans-serif;font-size:18px;border:none;padding:16px;border-radius:26px;cursor:pointer;}
+#main{position:absolute;inset:0;display:none;flex-direction:column;}
+#main.on{display:flex;}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;flex-shrink:0;}
+#logo{font-family:'Anton',sans-serif;font-size:20px;}#logo span{color:var(--red);font-style:italic;}
+#invite-btn{font-size:11px;color:var(--lime);cursor:pointer;text-decoration:underline;}
+#swipe{flex:1;position:relative;overflow:hidden;}
+#cards{display:flex;height:100%;transition:transform .35s cubic-bezier(.25,.46,.45,.94);will-change:transform;}
+.card{flex-shrink:0;width:100%;height:100%;padding:8px 12px;display:flex;flex-direction:column;}
+.card-label{font-family:'Anton',sans-serif;font-size:18px;padding:4px 0 8px;display:flex;align-items:center;gap:8px;}
 
-/* ═══ TOPBAR ═══ */
-#topbar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px;}
-#logo{font-family:'Anton',sans-serif;font-size:22px;}#logo span{color:var(--red);font-style:italic;}
-#crew-info{font-size:11px;color:rgba(255,255,255,.4);padding:0 16px 10px;}
-#crew-info b{color:var(--lime);}
-#share-btn{font-size:11px;color:var(--lime);cursor:pointer;text-decoration:underline;margin-left:8px;}
-
-/* ═══ FEED ═══ */
-#feed{flex:1;overflow-y:auto;padding:0 14px 120px;display:flex;flex-direction:column;gap:18px;scrollbar-width:none;}
-#feed::-webkit-scrollbar{display:none;}
-#empty{text-align:center;padding:60px 30px;color:rgba(255,255,255,.25);}
-#empty .e-icon{font-size:42px;margin-bottom:10px;}
-#empty .e-title{font-size:14px;font-weight:600;}
-#empty .e-sub{font-size:12px;margin-top:6px;line-height:1.5;}
-
-.tgroup{display:flex;flex-direction:column;gap:8px;}
-.tg-head{display:flex;align-items:center;gap:8px;}
-.tg-emoji{font-size:20px;}
-.tg-name{font-family:'Anton',sans-serif;font-size:17px;}
-.tg-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}.tg-row::-webkit-scrollbar{display:none;}
-.clip{flex-shrink:0;width:120px;aspect-ratio:3/4;border-radius:14px;overflow:hidden;position:relative;cursor:pointer;border:2px solid rgba(255,255,255,.08);background:#111;transition:transform .12s;}
-.clip:active{transform:scale(.96);}
-.clip video,.clip img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-.clip-name{position:absolute;bottom:5px;left:7px;font-size:10px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.8);z-index:2;}
-.clip-time{position:absolute;top:5px;right:7px;font-size:9px;color:rgba(255,255,255,.7);background:rgba(0,0,0,.4);padding:2px 6px;border-radius:8px;z-index:2;}
-
-/* ═══ REC BUTTON ═══ */
-#rec-bar{position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto;padding:10px 16px 30px;background:linear-gradient(transparent,rgba(0,0,0,.95) 30%);display:flex;justify-content:center;z-index:20;}
-#rec-btn{width:66px;height:66px;border-radius:50%;background:linear-gradient(180deg,var(--lime),#51D95F);border:4px solid #000;box-shadow:0 0 0 2.5px var(--lime);display:flex;align-items:center;justify-content:center;cursor:pointer;}
-#rec-btn:active{transform:scale(.9);}
-#rec-inner{width:20px;height:20px;background:#000;border-radius:50%;}
-
-/* ═══ CAMERA ═══ */
-#camera{position:fixed;inset:0;max-width:430px;margin:0 auto;z-index:50;background:#000;display:none;flex-direction:column;}
+.card-label .cl-share{margin-left:auto;font-size:11px;color:var(--lime);cursor:pointer;font-family:'Rubik',sans-serif;font-weight:600;}
+.card-grid{flex:1;display:flex;flex-direction:column;gap:3px;border-radius:18px;overflow:hidden;}
+.card-row{flex:1;position:relative;background:#111;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.card-row video,.card-row img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.card-row .row-name{position:absolute;bottom:6px;left:8px;font-size:11px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.8);z-index:2;}
+.card-row .row-sub{position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.6);z-index:2;}
+.card-row.empty{background:rgba(255,255,255,.03);border:1.5px dashed rgba(255,255,255,.15);cursor:pointer;font-size:28px;color:rgba(255,255,255,.25);}
+.card-row.multi{display:flex;flex-direction:row;gap:2px;}
+.card-row.multi .sub-cell{flex:1;position:relative;overflow:hidden;}
+.card-row.multi .sub-cell video,.card-row.multi .sub-cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.card-row.multi .sub-cell .sc-time{position:absolute;top:3px;right:4px;font-size:8px;color:rgba(255,255,255,.5);z-index:2;}
+.card-new{align-items:center;justify-content:center;gap:14px;}
+.card-new .cn-btn{width:72px;height:72px;border-radius:50%;background:linear-gradient(180deg,var(--lime),#51D95F);border:4px solid #000;box-shadow:0 0 0 2.5px var(--lime);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.card-new .cn-inner{width:22px;height:22px;background:#000;border-radius:50%;}
+.card-new .cn-text{font-size:13px;color:rgba(255,255,255,.5);text-align:center;}
+#dots{display:flex;justify-content:center;gap:6px;padding:8px 0;flex-shrink:0;}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer;}
+.dot.on{background:var(--lime);}
+#bottombar{display:flex;align-items:center;justify-content:center;padding:8px 16px 28px;flex-shrink:0;}
+#rec-btn{width:62px;height:62px;border-radius:50%;background:linear-gradient(180deg,var(--lime),#51D95F);border:4px solid #000;box-shadow:0 0 0 2px var(--lime);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+#rec-btn .ri{width:20px;height:20px;background:#000;border-radius:50%;}
+#camera{position:absolute;inset:0;z-index:50;background:#000;display:none;flex-direction:column;}
 #camera.show{display:flex;}
 #cam-stage{flex:1;position:relative;overflow:hidden;}
 #cam-stage.recording{box-shadow:inset 0 0 0 4px var(--red);}
 #cam-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
 #cam-fallback{position:absolute;inset:0;background:linear-gradient(160deg,#1a1a2e,#0f3460);display:none;align-items:center;justify-content:center;font-size:80px;opacity:.3;}
 #cam-close{position:absolute;top:18px;left:16px;z-index:5;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-#cam-rec{position:absolute;top:18px;right:16px;z-index:6;display:none;align-items:center;gap:8px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:6px 14px;border-radius:20px;}
+#cam-flip{position:absolute;top:18px;right:16px;z-index:5;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+#cam-ghost{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);z-index:4;font-family:'Anton',sans-serif;font-size:44px;color:rgba(255,255,255,.12);pointer-events:none;text-align:center;line-height:1.3;opacity:0;}
+#cam-ghost.show{animation:ghost 3.5s ease-out forwards;}
+@keyframes ghost{0%{opacity:0;transform:translate(-50%,-50%) scale(.85);}12%{opacity:1;transform:translate(-50%,-50%) scale(1);}60%{opacity:1;}100%{opacity:0;}}
+#cam-rec{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:8px;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:6px 14px;border-radius:20px;}
 #cam-rec.show{display:flex;}
 .rec-dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:blink 1s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
@@ -79,460 +72,186 @@ html,body{height:100%;background:var(--ink);font-family:'Rubik',sans-serif;color
 #cam-upload{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;cursor:pointer;}
 #cam-hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,.45);}
 #file-input{display:none;}
-
-/* ═══ MIGO CONFIRM ═══ */
-#confirm{position:fixed;inset:0;max-width:430px;margin:0 auto;z-index:60;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;padding:24px;}
-#confirm.show{display:flex;}
-#cf-card{background:var(--card);border:2px solid rgba(199,241,65,.4);border-radius:22px;padding:20px;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:14px;}
-#cf-preview{width:140px;height:186px;border-radius:14px;overflow:hidden;background:#222;}
-#cf-preview video{width:100%;height:100%;object-fit:cover;}
-#cf-label{font-family:'Anton',sans-serif;font-size:24px;color:var(--lime);}
-#cf-ask{font-size:13px;color:rgba(255,255,255,.7);text-align:center;line-height:1.5;}
-#cf-btns{display:flex;gap:10px;width:100%;}
-#cf-yes{flex:1;background:var(--lime);color:#000;font-weight:700;font-size:14px;border:none;padding:13px;border-radius:16px;cursor:pointer;}
-#cf-no{flex:1;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-weight:600;font-size:14px;border:1px solid rgba(255,255,255,.15);padding:13px;border-radius:16px;cursor:pointer;}
-
-/* ═══ NUDGE ═══ */
-#nudge{position:fixed;top:-80px;left:14px;right:14px;max-width:402px;margin:0 auto;z-index:70;background:var(--card);border:2px solid var(--lime);border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:top .5s cubic-bezier(.34,1.56,.64,1);cursor:pointer;box-shadow:0 12px 36px rgba(0,0,0,.6);}
-#nudge.show{top:14px;}
-#nudge-text{font-size:12px;line-height:1.45;}#nudge-text b{color:var(--lime);}
-
-/* ═══ CATEGORY PICKER ═══ */
-#cf-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;}
-.cat-btn{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.15);border-radius:14px;padding:8px 14px;font-size:13px;font-weight:600;color:rgba(255,255,255,.7);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:5px;}
-.cat-btn:active{transform:scale(.95);}
-.cat-btn.suggested{border-color:var(--lime);color:var(--lime);background:rgba(199,241,65,.08);animation:glow 1.5s infinite;}
-@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(199,241,65,.3)}50%{box-shadow:0 0 0 6px rgba(199,241,65,0)}}
-/* ═══ TOAST ═══ */
 #toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-60px);z-index:80;background:var(--lime);color:#000;font-size:13px;font-weight:700;padding:10px 20px;border-radius:24px;transition:.35s;opacity:0;pointer-events:none;}
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#nudge{position:fixed;top:-70px;left:14px;right:14px;max-width:402px;margin:0 auto;z-index:60;background:#151517;border:2px solid var(--lime);border-radius:18px;padding:10px 14px;font-size:12px;line-height:1.4;transition:top .5s cubic-bezier(.34,1.56,.64,1);cursor:pointer;}
+#nudge.show{top:14px;}
+#nudge b{color:var(--lime);}
+#topic-confirm{position:absolute;inset:0;z-index:55;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+#topic-confirm.show{display:flex;}
+
+#tc-input{background:transparent;border:none;border-bottom:2px solid var(--lime);font-family:'Anton',sans-serif;font-size:26px;color:#fff;text-align:center;padding:8px 4px;width:200px;outline:none;caret-color:var(--lime);}
+#tc-hint{font-size:11px;color:rgba(255,255,255,.35);}
+#tc-btn{background:var(--lime);color:#000;font-family:'Anton',sans-serif;font-size:16px;border:none;padding:14px 44px;border-radius:24px;cursor:pointer;margin-top:6px;}
+#mix-btn{font-size:11px;color:var(--lime);cursor:pointer;font-weight:600;background:rgba(199,241,65,.12);padding:5px 10px;border-radius:10px;margin-right:auto;margin-left:12px;}
+#export-preview{position:absolute;inset:0;z-index:70;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;}
+#export-preview.show{display:flex;}
+#export-preview video{max-width:100%;max-height:60vh;border-radius:16px;}
+.ep-actions{display:flex;gap:12px;}
+.ep-btn{padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px;cursor:pointer;border:none;text-decoration:none;display:inline-block;}
+.ep-save{background:var(--lime);color:#000;}
+.ep-close{background:rgba(255,255,255,.12);color:#fff;}
+#zoom{position:absolute;inset:0;z-index:75;background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center;}
+#zoom.show{display:flex;}
+#zoom video{max-width:100%;max-height:90vh;border-radius:14px;}
 </style>
 </head>
 <body>
 <div id="app">
-
-  <!-- ONBOARDING -->
-  <div id="onboard">
-    <h1>AM<span>I</span>NGO</h1>
-    <div class="sub">film moments with your crew<br>migo sorts them & nudges your friends</div>
-    <input id="ob-name" placeholder="your name" maxlength="20" autocomplete="off">
-    <button class="ob-btn" id="ob-create" onclick="createCrew()">START A CREW</button>
-    <div class="ob-or" id="ob-or-text">or open a link from a friend to join theirs</div>
-  </div>
-
-  <!-- MAIN -->
-  <div id="topbar" style="display:none;">
-    <div id="logo">AM<span>I</span>NGO</div>
-  </div>
-  <div id="crew-info" style="display:none;"><span id="members-line"></span><span id="share-btn" onclick="shareCrew()">invite +</span><span id="admin-link" style="margin-left:8px;font-size:10px;color:rgba(255,255,255,.2);cursor:pointer;" onclick="openAdmin()"></span></div>
-  <div id="feed" style="display:none;">
-    <div id="empty"><div class="e-icon">📷</div><div class="e-title">nothing here yet</div><div class="e-sub">film something — migo will sort it<br>and nudge your crew</div></div>
-  </div>
-  <div id="rec-bar" style="display:none;">
-    <button id="export-btn" onclick="exportFilm()" style="position:absolute;left:16px;bottom:36px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-size:11px;font-weight:700;padding:8px 16px;border-radius:20px;cursor:pointer;">🎬 export</button>
-    <div id="rec-btn" onclick="openCamera()"><div id="rec-inner"></div></div>
-  </div>
-
-  <!-- CAMERA -->
-  <div id="camera">
-    <div id="cam-stage"><video id="cam-video" autoplay muted playsinline></video><div id="cam-fallback">📷</div></div>
-    <div id="cam-close" onclick="closeCamera()">✕</div>
-    <div id="cam-rec"><div class="rec-dot"></div><div id="cam-timer">0:00</div></div>
-    <div id="cam-bottom">
-      <div id="cam-upload" onclick="document.getElementById('file-input').click()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-5-5L5 22"/></svg></div>
-      <button id="cam-shutter" onclick="toggleRec()"></button>
-      <div style="width:42px"></div>
-    </div>
-    <div id="cam-hint">tap to start filming</div>
-    <input type="file" id="file-input" accept="video/*">
-  </div>
-
-  <!-- MIGO CONFIRM -->
-  <div id="confirm">
-    <div id="cf-card">
-      <div id="cf-preview"></div>
-      <div id="cf-ask" style="font-size:14px;font-weight:600;">what's this?</div>
-      <div id="cf-grid"></div>
-      <button id="cf-skip" onclick="confirmClip(null)" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:12px;cursor:pointer;margin-top:4px;">skip — just save</button>
-    </div>
-  </div>
-
-  <!-- NUDGE -->
-  <div id="nudge" onclick="nudgeTap()"><div id="nudge-text"></div></div>
-
-  <div id="toast"></div>
+<div id="onboard"><h1>AM<span>I</span>NGO</h1><div class="sub">film 2s clips with your crew<br>same topic, different takes</div><input id="ob-name" placeholder="your name" maxlength="20" autocomplete="off"><button class="ob-btn" id="ob-btn" onclick="startOrJoin()">START A CREW</button></div>
+<div id="main"><div id="topbar"><div id="logo">AM<span>I</span>NGO</div><div id="mix-btn" onclick="mixAll()">mix ▶</div><div id="invite-btn" onclick="shareCrew()">invite +</div></div><div id="swipe"><div id="cards"></div></div><div id="dots"></div><div id="bottombar"><div id="rec-btn" onclick="openCamera()"><div class="ri"></div></div></div></div>
+<div id="camera"><div id="cam-stage"><video id="cam-video" autoplay muted playsinline></video><div id="cam-fallback">📷</div><div id="cam-ghost"></div></div><div id="cam-close" onclick="closeCamera()">✕</div><div id="cam-flip" onclick="flipCamera()">🔄</div><div id="cam-rec"><div class="rec-dot"></div><div id="cam-timer">0:02</div></div><div id="cam-bottom"><div id="cam-upload" onclick="document.getElementById('file-input').click()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-5-5L5 22"/></svg></div><button id="cam-shutter" onclick="toggleRec()"></button><div style="width:42px"></div></div><div id="cam-hint">tap to film 2s</div><input type="file" id="file-input" accept="video/*"></div>
+<div id="nudge" onclick="nudgeTap()"></div>
+<div id="export-preview"><video id="ep-video" controls autoplay loop playsinline></video><div class="ep-actions"><a id="ep-save" class="ep-btn ep-save" download="amingo.mp4">⬇ save</a><button class="ep-btn ep-close" onclick="closeExport()">close</button></div></div>
+<div id="topic-confirm"><input id="tc-input" maxlength="20" autocomplete="off" spellcheck="false"><div id="tc-hint">tap name to edit</div><button id="tc-btn" onclick="confirmTopic()">✓</button></div>
+<div id="zoom"><video id="zoom-video" loop playsinline webkit-playsinline controls></video></div>
+<div id="toast"></div>
 </div>
-
 <script>
-// ═══ STATE ═══
-let crewId=null, memberId=null, myName='';
-let camStream=null, recorder=null, chunks=[], isRecording=false, recTimer=null, recInterval=null, recSeconds=0;
-let capturedBlob=null, capturedThumb=null, pendingCategory=null;
-let pollTimer=null, lastNudgeTs=0;
+/* ───────── Amingo v2 进度（2026-06-18 全模块化重写）─────────
+ * 后端：server.js 薄路由 + store.js(数据/落盘) + vision.js(Claude识别) + video.js(ffmpeg)
+ * 视频：spawn 异步转码(H.264/faststart) + 分屏 + drawtext 标题 + 串行锁 + export 只留最近1个
+ * 数据：thumb 移出 crews.json，存 thumbs/，仅作 <video> 的 poster 占位
+ * 前端：卡片视频一律真播放(vtag)；同卡内所有成员并行播放；切卡暂停离开卡(playOnlyCard，防 iOS 多视频卡死)
+ * nudge：带 fromId，按 memberId 判断「自己」(修同名误判)
+ * 部署：Dockerfile 去 python/Pillow，装 fonts-dejavu-core(drawtext 字体)
+ * 已验证：全路由 curl + 完整流水线(webm转码→2路分屏+标题→导出 1080x1920/h264/2.00s)
+ * 待真机：iOS 实机并行播放、autoplay 兜底、drawtext 文字像素
+ * ──────────────────────────────────────────────────────── */
+let crewId=null,memberId=null,myName='',camStream=null,recorder=null,chunks=[],isRecording=false,recTimer=null,recInterval=null,capturedBlob=null,capturedThumb=null,quickTopic=null,facingMode='user',currentCard=0,pollTimer=null,lastNudgeTs=0,existingCategories=new Set();
+const saved={c:localStorage.getItem('amingo_crew'),m:localStorage.getItem('amingo_member'),n:localStorage.getItem('amingo_name')};
+const joinMatch=location.pathname.match(/^\/join\/(\w+)/);
+if(saved.c&&saved.m&&!joinMatch){crewId=saved.c;memberId=saved.m;myName=saved.n||'me';enterApp();}
+else if(joinMatch){document.getElementById('ob-btn').textContent='JOIN CREW';fetch('/api/crew/'+joinMatch[1]).then(r=>r.json()).then(d=>{if(d.members)document.querySelector('.sub').textContent=d.members[0].name+"'s crew";}).catch(()=>{});}
+function startOrJoin(){myName=document.getElementById('ob-name').value.trim()||'me';const url=joinMatch?'/api/crew/'+joinMatch[1]+'/join':'/api/crew';fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:myName})}).then(r=>r.json()).then(d=>{crewId=d.crewId;memberId=d.memberId;localStorage.setItem('amingo_crew',crewId);localStorage.setItem('amingo_member',memberId);localStorage.setItem('amingo_name',myName);enterApp();});}
+function enterApp(){document.getElementById('onboard').classList.add('hidden');document.getElementById('main').classList.add('on');lastNudgeTs=Date.now();refreshCards();pollTimer=setInterval(()=>{refreshCards();checkNudges();},4000);}
+function shareCrew(){const u=location.origin+'/join/'+crewId;navigator.clipboard.writeText(u).then(()=>toast('invite link copied!')).catch(()=>prompt('Share:',u));}
 
-// ═══ MIGO AI ═══
-let migoModel=null;
-(function loadMigo(){
-  if(typeof mobilenet==='undefined'){setTimeout(loadMigo,500);return;}
-  mobilenet.load({version:2,alpha:0.5}).then(m=>{migoModel=m;console.log('[migo] ready');}).catch(e=>console.log('[migo]',e));
-})();
-
-const MIGO_MAP=[
-  {kw:['face','person','man','woman','girl','boy','people','wig','mask','lipstick','lotion','hair spray','perfume'],name:'Selfie',emoji:'🤳'},
-  {kw:['bottle','mug','cup','coffee','espresso','pitcher','goblet','beer','wine','soda','water bottle','cocktail','teapot'],name:'Sips',emoji:'☕'},
-  {kw:['shoe','sneaker','sandal','boot','clog','loafer','running shoe'],name:'Kicks',emoji:'👟'},
-  {kw:['plant','flower','daisy','vase','cactus','tree','leaf'],name:'Green',emoji:'🌱'},
-  {kw:['dog','cat','puppy','kitten','terrier','retriever','spaniel','tabby','bird','hamster','goldfish'],name:'Pets',emoji:'🐾'},
-  {kw:['pizza','burger','sandwich','plate','bagel','taco','burrito','ice cream','pretzel','fries','ramen','sushi','banana','orange','lemon','strawberry','broccoli','corn','hotdog','soup','salad','cake','chocolate','restaurant','dining','menu','cheeseburger','food','meal','meat loaf','guacamole','carbonara','french loaf','grocery','bakery','dough','croquette','potpie','consomme','tray','bowl'],name:'Bites',emoji:'🍕'},
-  {kw:['laptop','keyboard','monitor','screen','notebook','desk','mouse','computer','printer'],name:'Grind',emoji:'💻'},
-  {kw:['car','bus','bicycle','bike','train','wheel','scooter','skateboard','motor','cab','taxi'],name:'Wheels',emoji:'🛞'},
-  {kw:['sunglass','hat','jersey','shirt','jean','backpack','sweatshirt','suit','tie','purse','watch','necklace'],name:'Fits',emoji:'🧢'},
-  {kw:['book','library','binder','comic','magazine','newspaper'],name:'Pages',emoji:'📚'},
-  {kw:['guitar','piano','drum','microphone','headphone','speaker','violin'],name:'Tunes',emoji:'🎧'},
-  {kw:['sky','cloud','sunset','sunrise','mountain','beach','ocean','lake','landscape','seashore'],name:'Views',emoji:'🌅'},
-  {kw:['bed','pillow','blanket','couch','sofa','quilt','lamp','candle'],name:'Cozy',emoji:'🛋️'},
-];
-async function migoLook(canvas){
-  if(!migoModel)return null;
-  try{const p=await migoModel.classify(canvas,3);if(!p||!p.length)return null;const t=p[0];if(t.probability<0.10)return null;const c=t.className.toLowerCase();return MIGO_MAP.find(d=>d.kw.some(k=>c.includes(k)))||null;}catch(e){return null;}
-}
-
-// ═══ ONBOARDING ═══
-// Check if joining via link
-const pathMatch = location.pathname.match(/^\/join\/(\w+)/);
-if(pathMatch){
-  // Joining an existing crew
-  document.getElementById('ob-create').textContent='JOIN CREW';
-  document.getElementById('ob-or-text').textContent='joining a friend\'s crew...';
-  document.getElementById('ob-create').onclick=()=>joinCrew(pathMatch[1]);
-  // Fetch crew info to show who invited them
-  fetch('/api/crew/'+pathMatch[1]).then(r=>r.json()).then(d=>{
-    if(d.members && d.members.length){
-      document.getElementById('ob-or-text').textContent=d.members[0].name+'\'s crew · '+d.clips.length+' clips so far';
+// HTML 转义（XSS 双保险；后端已清洗 name/category，这里再防御历史脏数据）
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+// 卡片视频一律真播放：thumbUrl 仅作 poster 占位；点击全屏放大(zoomVideo)
+function vtag(c){return '<video src="'+c.videoUrl+'"'+(c.thumbUrl?' poster="'+c.thumbUrl+'"':'')+' autoplay muted loop playsinline webkit-playsinline preload="metadata" onclick="zoomVideo(event,this)" style="cursor:pointer"></video>';}
+function refreshCards(){
+if(!crewId)return;
+fetch('/api/crew/'+crewId).then(r=>{if(!r.ok){localStorage.clear();location.reload();return null;}return r.json();}).then(data=>{
+if(!data)return;
+const members=data.members,grouped={},moments=[];
+data.clips.forEach(c=>{if(c.category)(grouped[c.category]=grouped[c.category]||{clips:[]}).clips.push(c);else moments.push(c);});
+existingCategories=new Set(Object.keys(grouped).map(k=>k.toLowerCase()));
+const container=document.getElementById('cards');
+let html='';
+Object.entries(grouped).forEach(([cat,{clips}])=>{
+  const byMember={};
+  clips.forEach(c=>(byMember[c.memberName]=byMember[c.memberName]||[]).push(c));
+  html+='<div class="card"><div class="card-label">'+esc(cat)+'<span class="cl-share" onclick="shareCard(\''+cat+'\')">▶ share</span></div><div class="card-grid">';
+  members.forEach(m=>{
+    const mc=byMember[m.name];
+    if(!mc||!mc.length){
+      html+=m.id===memberId?'<div class="card-row empty" onclick="filmForTopic(\''+cat+'\')">+</div>':'<div class="card-row empty"><span style="font-size:12px;color:rgba(255,255,255,.2)">'+esc(m.name)+'</span></div>';
+    }else if(mc.length===1){
+      const c=mc[0];
+      html+='<div class="card-row">'+vtag(c)+'<div class="row-name">'+(c.memberId===memberId?'you':esc(c.memberName))+'</div><div class="row-sub">'+timeAgo(c.ts)+'</div></div>';
+    }else{
+      html+='<div class="card-row multi">';
+      mc.forEach(c=>{html+='<div class="sub-cell">'+vtag(c)+'<div class="sc-time">'+timeAgo(c.ts)+'</div></div>';});
+      html+='<div class="sub-cell" onclick="filmForTopic(\''+cat+'\')" style="background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:rgba(255,255,255,.2);">+</div></div>';
     }
-  }).catch(()=>{});
-}
-function createCrew(){
-  myName=document.getElementById('ob-name').value.trim()||'me';
-  fetch('/api/crew',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:myName})})
-  .then(r=>r.json()).then(d=>{crewId=d.crewId;memberId=d.memberId;enterApp();});
-}
-function joinCrew(id){
-  myName=document.getElementById('ob-name').value.trim()||'friend';
-  fetch(`/api/crew/${id}/join`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:myName})})
-  .then(r=>r.json()).then(d=>{crewId=d.crewId;memberId=d.memberId;enterApp();});
-}
-
-// ═══ ENTER APP ═══
-function openAdmin(){ window.open('/admin.html?crew='+crewId, '_blank'); }
-function enterApp(){
-  document.getElementById('admin-link').textContent='id:'+crewId;
-  document.getElementById('onboard').classList.add('hidden');
-  document.getElementById('topbar').style.display='';
-  document.getElementById('crew-info').style.display='';
-  document.getElementById('feed').style.display='';
-  document.getElementById('rec-bar').style.display='';
-  refreshFeed();
-  pollTimer=setInterval(()=>{refreshFeed();checkNudges();},3000);
-}
-
-// ═══ FEED ═══
-function refreshFeed(){
-  if(!crewId)return;
-  fetch(`/api/crew/${crewId}`).then(r=>r.json()).then(data=>{console.log('[refreshFeed] clips:', data.clips?.length, 'members:', data.members?.length);
-    // Members line
-    const others=data.members.filter(m=>m.id!==memberId).map(m=>'<b>'+m.name+'</b>');
-    document.getElementById('members-line').innerHTML=others.length?others.join(' & ')+' in your crew':'just you so far — invite friends!';
-    // Build feed by category
-    const feed=document.getElementById('feed');
-    const grouped={};const uncategorized=[];
-    data.clips.forEach(c=>{
-      if(c.category){(grouped[c.category]=grouped[c.category]||[]).push(c);}
-      else uncategorized.push(c);
-    });
-    let html='';
-    for(const[cat,clips]of Object.entries(grouped)){
-      const emoji=clips[0].emoji||'📷';
-      html+=`<div class="tgroup"><div class="tg-head"><div class="tg-emoji">${emoji}</div><div class="tg-name">${cat}</div></div><div class="tg-row">`;
-      clips.forEach(c=>{
-        const isMe=c.memberId===memberId;
-        const ago=timeAgo(c.ts);
-        html+=`<div class="clip" onclick="playClip('${c.videoUrl}')">`;
-        if(c.thumb) html+=`<img src="${c.thumb}" alt="">`;
-        html+=`<div class="clip-name">${isMe?'you':c.memberName}</div><div class="clip-time">${ago}</div></div>`;
-      });
-      html+=`</div></div>`;
-    }
-    if(uncategorized.length){
-      html+=`<div class="tgroup"><div class="tg-head"><div class="tg-emoji">📷</div><div class="tg-name">Moments</div></div><div class="tg-row">`;
-      uncategorized.forEach(c=>{
-        const isMe=c.memberId===memberId;const ago=timeAgo(c.ts);
-        html+=`<div class="clip" onclick="playClip('${c.videoUrl}')">`;
-        if(c.thumb) html+=`<img src="${c.thumb}" alt="">`;
-        html+=`<div class="clip-name">${isMe?'you':c.memberName}</div><div class="clip-time">${ago}</div></div>`;
-      });
-      html+=`</div></div>`;
-    }
-    if(!data.clips.length) html=`<div id="empty"><div class="e-icon">📷</div><div class="e-title">nothing here yet</div><div class="e-sub">film something — migo will sort it<br>and nudge your crew</div></div>`;
-    feed.innerHTML=html;
   });
-}
-function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
-function playClip(url){window.open(url,'_blank');}
-function shareCrew(){const url=`${location.origin}/join/${crewId}`;navigator.clipboard.writeText(url).then(()=>toast('invite link copied!')).catch(()=>prompt('Share this link:',url));}
-
-// ═══ CAMERA ═══
-async function openCamera(){
-  document.getElementById('camera').classList.add('show');
-  try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true});document.getElementById('cam-video').srcObject=camStream;document.getElementById('cam-video').style.display='block';document.getElementById('cam-fallback').style.display='none';}
-  catch(e){document.getElementById('cam-video').style.display='none';document.getElementById('cam-fallback').style.display='flex';}
-}
-function closeCamera(){
-  if(recorder&&recorder.state!=='inactive')try{recorder.stop();}catch(e){}
-  isRecording=false;clearTimeout(recTimer);clearInterval(recInterval);
-  document.getElementById('cam-shutter').classList.remove('rec');
-  document.getElementById('cam-rec').classList.remove('show');
-  document.getElementById('cam-stage').classList.remove('recording');
-  document.getElementById('cam-hint').textContent='tap to start filming';
-  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
-  document.getElementById('camera').classList.remove('show');
-}
-
-function toggleRec(){
-  if(!camStream)return;
-  if(!isRecording){
-    isRecording=true;chunks=[];recSeconds=0;
-    document.getElementById('cam-shutter').classList.add('rec');
-    document.getElementById('cam-rec').classList.add('show');
-    document.getElementById('cam-stage').classList.add('recording');
-    document.getElementById('cam-hint').textContent='filming 3s...';
-    document.getElementById('cam-timer').textContent='0:00';
-    recInterval=setInterval(()=>{recSeconds++;document.getElementById('cam-timer').textContent=Math.floor(recSeconds/60)+':'+String(recSeconds%60).padStart(2,'0');},1000);
-    try{recorder=new MediaRecorder(camStream);}catch(e){recorder=new MediaRecorder(camStream,{mimeType:'video/webm'});}
-    recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
-    recorder.onstop=()=>{console.log('[rec] stopped, chunks:',chunks.length);capturedBlob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});console.log('[rec] blob size:',capturedBlob.size);processCapture();};
-    recorder.start(200); console.log('[rec] started, state:', recorder.state);console.log('[rec] started');
-    recTimer=setTimeout(toggleRec,3000);
-  }else{
-    isRecording=false;clearTimeout(recTimer);clearInterval(recInterval);
-    document.getElementById('cam-shutter').classList.remove('rec');
-    document.getElementById('cam-rec').classList.remove('show');
-    document.getElementById('cam-stage').classList.remove('recording');
-    document.getElementById('cam-hint').textContent='tap to start filming';
-    if(recorder&&recorder.state!=='inactive'){console.log('[rec] calling stop');recorder.stop();}else{console.log('[rec] already inactive');}
-  }
-}
-
-document.getElementById('file-input').addEventListener('change',e=>{
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  capturedBlob=f;processCapture();
+  html+='</div></div>';
 });
+if(moments.length){
+  html+='<div class="card"><div class="card-label">Moments</div><div class="card-grid">';
+  moments.forEach(c=>{html+='<div class="card-row">'+vtag(c)+'<div class="row-name">'+(c.memberId===memberId?'you':esc(c.memberName))+'</div><div class="row-sub">'+timeAgo(c.ts)+'</div></div>';});
+  html+='</div></div>';
+}
+html+='<div class="card card-new"><div class="cn-btn" onclick="openCamera()"><div class="cn-inner"></div></div><div class="cn-text">film something new</div></div>';
+container.innerHTML=html;
+const n=container.children.length;container.style.width=(n*100)+'%';
+Array.from(container.children).forEach(c=>c.style.width=(100/n)+'%');
+const dots=document.getElementById('dots');dots.innerHTML='';
+for(let i=0;i<n;i++){const d=document.createElement('div');d.className='dot'+(i===currentCard?' on':'');d.onclick=()=>goCard(i);dots.appendChild(d);}
+goCard(Math.min(currentCard,n-1));
+});
+}
+function goCard(i){currentCard=i;const c=document.getElementById('cards'),n=c.children.length;if(!n)return;c.style.transform='translateX(-'+(i*(100/n))+'%)';document.querySelectorAll('.dot').forEach((d,j)=>d.classList.toggle('on',j===i));playOnlyCard(i);}
+// 只播当前卡（卡内所有成员视频并行播放）；离开的卡暂停，防 iOS 多视频卡死
+function playOnlyCard(i){const cards=document.getElementById('cards').children;for(let j=0;j<cards.length;j++){cards[j].querySelectorAll('video').forEach(v=>{if(j===i){const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{v.pause();}});}}
+let sx=null;
+document.getElementById('swipe').addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
+document.getElementById('swipe').addEventListener('touchend',e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx,n=document.getElementById('cards').children.length;if(dx<-50&&currentCard<n-1)goCard(currentCard+1);else if(dx>50&&currentCard>0)goCard(currentCard-1);sx=null;});
+function filmForTopic(c){quickTopic={name:c};openCamera();}
+async function shareCard(cat){
+toast('exporting '+cat+'...');
+try{const r=await fetch('/api/crew/'+crewId+'/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:cat})});const d=await r.json();if(d.error){toast(d.error);return;}showExport(d.videoUrl);}catch(e){toast('export failed');}
+}
+async function mixAll(){
+toast('mixing all topics...');
+try{const r=await fetch('/api/crew/'+crewId+'/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});const d=await r.json();if(d.error){toast(d.error);return;}showExport(d.videoUrl);}catch(e){toast('export failed');}
+}
+function showExport(url){document.getElementById('ep-video').src=url;document.getElementById('ep-save').href=url;document.getElementById('export-preview').classList.add('show');}
+function closeExport(){document.getElementById('export-preview').classList.remove('show');document.getElementById('ep-video').src='';}
+function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';}
 
-// ═══ PROCESS: grab frame → migo → confirm ═══
+async function openCamera(){
+document.getElementById('camera').classList.add('show');
+const g=document.getElementById('cam-ghost');
+if(quickTopic){g.textContent=quickTopic.name;g.classList.remove('show');void g.offsetWidth;g.classList.add('show');}
+else{g.textContent='';g.classList.remove('show');}
+try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode},audio:true});document.getElementById('cam-video').srcObject=camStream;document.getElementById('cam-video').style.display='block';document.getElementById('cam-video').style.transform=facingMode==='user'?'scaleX(-1)':'none';document.getElementById('cam-fallback').style.display='none';}
+catch(e){document.getElementById('cam-video').style.display='none';document.getElementById('cam-fallback').style.display='flex';}
+}
+function closeCamera(){if(recorder&&recorder.state!=='inactive')try{recorder.stop();}catch(e){}isRecording=false;clearTimeout(recTimer);clearInterval(recInterval);document.getElementById('cam-shutter').classList.remove('rec');document.getElementById('cam-rec').classList.remove('show');document.getElementById('cam-stage').classList.remove('recording');document.getElementById('cam-hint').textContent='tap to film 2s';if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}document.getElementById('camera').classList.remove('show');}
+function flipCamera(){facingMode=facingMode==='user'?'environment':'user';if(camStream)camStream.getTracks().forEach(t=>t.stop());navigator.mediaDevices.getUserMedia({video:{facingMode},audio:true}).then(s=>{camStream=s;document.getElementById('cam-video').srcObject=s;document.getElementById('cam-video').style.transform=facingMode==='user'?'scaleX(-1)':'none';}).catch(()=>{});}
+function toggleRec(){if(!camStream)return;if(!isRecording){isRecording=true;chunks=[];document.getElementById('cam-shutter').classList.add('rec');document.getElementById('cam-rec').classList.add('show');document.getElementById('cam-stage').classList.add('recording');document.getElementById('cam-hint').textContent='filming...';let secs=2;document.getElementById('cam-timer').textContent='0:0'+secs;recInterval=setInterval(()=>{secs--;document.getElementById('cam-timer').textContent='0:0'+Math.max(0,secs);},1000);try{recorder=new MediaRecorder(camStream);}catch(e){recorder=new MediaRecorder(camStream,{mimeType:'video/webm'});}recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};recorder.onstop=()=>{capturedBlob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});processCapture();};recorder.start(100);recTimer=setTimeout(()=>{isRecording=false;clearInterval(recInterval);document.getElementById('cam-shutter').classList.remove('rec');document.getElementById('cam-rec').classList.remove('show');document.getElementById('cam-stage').classList.remove('recording');if(recorder&&recorder.state!=='inactive')recorder.stop();},2000);}}
+document.getElementById('file-input').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f){capturedBlob=f;processCapture();}});
+
 function processCapture(){
-  console.log('[processCapture] called, blob size:', capturedBlob?.size);
-  closeCamera();
-  // Skip video decoding — go straight to category picker
-  const url = URL.createObjectURL(capturedBlob);
-  capturedThumb = null; // thumbnail will be grabbed later if needed
-  showCategoryPicker(url);
+closeCamera();if(!capturedBlob)return;
+if(quickTopic){uploadClip(quickTopic.name);quickTopic=null;return;}
+const url=URL.createObjectURL(capturedBlob);
+const vid=document.createElement('video');vid.muted=true;vid.playsInline=true;vid.autoplay=true;
+let done=false;
+const finish=fn=>{if(done)return;done=true;URL.revokeObjectURL(url);fn();}; // 用完即释放，杜绝 blob URL 泄漏
+vid.onloadeddata=()=>{setTimeout(()=>{if(done)return;let ok=false;try{const c=document.createElement('canvas');c.width=vid.videoWidth||320;c.height=vid.videoHeight||240;c.getContext('2d').drawImage(vid,0,0);capturedThumb=c.toDataURL('image/jpeg',0.5);vid.pause();ok=true;}catch(e){}finish(()=>{if(!ok){uploadClip(null);return;}fetch('/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:capturedThumb})}).then(r=>r.json()).then(r=>{if(!r.label){uploadClip(null);return;}if(existingCategories.has(r.label.toLowerCase())){uploadClip(r.label);}else{showTopicConfirm(r.label);}}).catch(()=>uploadClip(null));});},300);};
+vid.onerror=()=>finish(()=>uploadClip(null));
+vid.src=url;
+setTimeout(()=>finish(()=>uploadClip(null)),5000);
 }
 
-function showCategoryPicker(videoUrl){
-  console.log('[show] opening tag picker');
-  const cf = document.getElementById('confirm');
-  document.getElementById('cf-preview').innerHTML='<video src="'+videoUrl+'" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></video>';
-  cf.style.display='flex'; cf.classList.add('show');
-  console.log('[showCategoryPicker] confirm overlay shown');
-  // Grab thumbnail in background
-  const vid = document.createElement('video');
-  vid.muted=true; vid.playsInline=true; vid.autoplay=true;
-  vid.onloadeddata = ()=>{ setTimeout(()=>{ try{ const c=document.createElement('canvas');c.width=vid.videoWidth||320;c.height=vid.videoHeight||240;c.getContext('2d').drawImage(vid,0,0);capturedThumb=c.toDataURL('image/jpeg',0.6); }catch(e){} vid.pause(); },200); };
-  vid.src = videoUrl;
-  
-  // Show tag input immediately
-  showTagInput();
+async function uploadClip(category){
+if(!capturedBlob)return;
+const form=new FormData();form.append('clip',capturedBlob,'clip.webm');form.append('memberId',memberId);form.append('thumb',capturedThumb||'');
+if(category){form.append('category',category);}
+try{await fetch('/api/crew/'+crewId+'/clip',{method:'POST',body:form});
+if(category){await fetch('/api/crew/'+crewId+'/nudge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({memberId,category})});toast(category+' ✓');}
+else toast('saved ✓');
+}catch(e){toast('upload failed');}
+capturedBlob=null;capturedThumb=null;setTimeout(refreshCards,500);
 }
 
-// MobileNet classification → map to simple social-friendly keywords
-const KEYWORD_MAP = [
-  // food & drink
-  {kw:['pizza','burger','cheeseburger','sandwich','plate','bagel','taco','burrito','ice cream','pretzel','fries','ramen','sushi','banana','orange','lemon','strawberry','broccoli','corn','hotdog','soup','salad','cake','chocolate','restaurant','dining','menu','meat loaf','guacamole','carbonara','french loaf','grocery','bakery','dough','croquette','potpie','consomme','tray','bowl','food','meal','egg','bread','noodle'], label:'Food', emoji:'🍔'},
-  {kw:['bottle','mug','cup','coffee','espresso','pitcher','goblet','beer','wine','soda','water bottle','cocktail','teapot','pop bottle','red wine','latte'], label:'Drink', emoji:'☕'},
-  // people
-  {kw:['face','person','man','woman','girl','boy','people','head','wig','mask','lipstick','lotion','hair spray','perfume','sunscreen','jersey','suit'], label:'Selfie', emoji:'🤳'},
-  // fashion
-  {kw:['shoe','sneaker','sandal','boot','clog','loafer','running shoe','sunglass','hat','shirt','jean','backpack','sweatshirt','tie','purse','handbag','wallet','watch','necklace','ring','bow tie'], label:'OOTD', emoji:'👗'},
-  // pets
-  {kw:['dog','cat','puppy','kitten','terrier','retriever','spaniel','tabby','bird','hamster','goldfish','parrot','turtle','poodle','husky','labrador','persian','siamese','bulldog','corgi','pug'], label:'Pet', emoji:'🐾'},
-  // outdoors & views
-  {kw:['sky','cloud','sunset','sunrise','mountain','beach','ocean','lake','landscape','seashore','cliff','valley','volcano','promontory','lakeside','park','bench','tree','garden','bridge','street','alley','church','castle','palace','fountain','monument','tower'], label:'Outdoor', emoji:'🌅'},
-  // plants
-  {kw:['plant','flower','daisy','vase','cactus','leaf','pot','bouquet','rose','tulip','sunflower'], label:'Green', emoji:'🌱'},
-  // work & study
-  {kw:['laptop','keyboard','monitor','screen','notebook','desk','mouse','computer','printer','modem','iPod','library','book','binder','comic','magazine','newspaper','pen','pencil'], label:'Daily', emoji:'💻'},
-  // transport
-  {kw:['car','bus','bicycle','bike','train','wheel','scooter','skateboard','motor','cab','taxi','minivan','jeep','ambulance','truck','trolley','airplane','boat','ship'], label:'Commute', emoji:'🚗'},
-  // music
-  {kw:['guitar','piano','drum','microphone','headphone','speaker','violin','harmonica','banjo','cello','flute','saxophone','accordion'], label:'Music', emoji:'🎵'},
-  // cozy & home
-  {kw:['bed','pillow','blanket','couch','sofa','quilt','lamp','candle','curtain','teddy','pajama','bathtub','shower','towel','mirror'], label:'Cozy', emoji:'🛋️'},
-  // sports & games
-  {kw:['ball','ping-pong','tennis','basketball','soccer','football','baseball','volleyball','frisbee','golf','swimming','gym','dumbbell','racket'], label:'Sports', emoji:'⚽'},
-];
-
-function showTagInput(){
-  const grid = document.getElementById('cf-grid');
-  grid.innerHTML = '';
-  document.getElementById('cf-ask').textContent = "what's this?";
-
-  // Input field
-  const input = document.createElement('input');
-  input.id = 'tag-input';
-  input.type = 'text';
-  input.placeholder = 'type a word: coffee, burger, sunset...';
-  input.style.cssText = 'width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.25);border-radius:14px;padding:12px 16px;font-size:15px;color:#fff;outline:none;text-align:center;margin-bottom:10px;';
-  input.onfocus = () => { input.style.borderColor = 'var(--lime)'; };
-  input.onblur = () => { input.style.borderColor = 'rgba(255,255,255,.25)'; };
-  grid.appendChild(input);
-
-  // Quick pick emojis
-  const qRow = document.createElement('div');
-  qRow.style.cssText = 'display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;';
-  const QUICK = [
-    {label:'Food',emoji:'🍔'},
-    {label:'Drink',emoji:'☕'},
-    {label:'Selfie',emoji:'🤳'},
-    {label:'OOTD',emoji:'👗'},
-    {label:'Pet',emoji:'🐾'},
-    {label:'Outdoor',emoji:'🌅'},
-    {label:'Daily',emoji:'💻'},
-    {label:'Cozy',emoji:'🛋️'},
-  ];
-  QUICK.forEach(q => {
-    const btn = document.createElement('button');
-    btn.style.cssText = 'width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.15);font-size:20px;cursor:pointer;transition:.12s;';
-    btn.textContent = q.emoji;
-    btn.title = q.label;
-    btn.onmouseenter = () => { btn.style.borderColor='var(--lime)'; btn.style.transform='scale(1.1)'; };
-    btn.onmouseleave = () => { btn.style.borderColor='rgba(255,255,255,.15)'; btn.style.transform=''; };
-    btn.onclick = () => { input.value = q.label; };
-    qRow.appendChild(btn);
-  });
-  grid.appendChild(qRow);
-
-  // Save & nudge button
-  const nudgeBtn = document.createElement('button');
-  nudgeBtn.style.cssText = 'width:100%;background:var(--lime);color:#000;font-weight:700;font-size:15px;border:none;padding:14px;border-radius:16px;cursor:pointer;transition:.12s;';
-  nudgeBtn.textContent = '✓ save & nudge crew';
-  nudgeBtn.onclick = () => {
-    const val = input.value.trim();
-    if(val){
-      confirmClip({name: val, emoji: guessEmoji(val)});
-    } else {
-      confirmClip(null);
-    }
-  };
-  grid.appendChild(nudgeBtn);
-
-  // Skip
-  const skip = document.createElement('button');
-  skip.style.cssText = 'background:none;border:none;color:rgba(255,255,255,.35);font-size:12px;cursor:pointer;margin-top:8px;width:100%;text-align:center;';
-  skip.textContent = 'skip — just save';
-  skip.onclick = () => confirmClip(null);
-  grid.appendChild(skip);
-  
-  // Focus input
-  setTimeout(() => input.focus(), 300);
+function showTopicConfirm(label){
+const inp=document.getElementById('tc-input');inp.value=label;
+document.getElementById('topic-confirm').classList.add('show');
 }
-
-function guessEmoji(text){
-  const t = text.toLowerCase();
-  const map = [
-    [['食','food','burger','pizza','面','饭','餐','吃','ramen','noodle','rice','meal','snack'],'🍔'],
-    [['饮','drink','coffee','tea','咖啡','奶茶','水','juice','beer','wine','latte','sip'],'☕'],
-    [['selfie','Selfie','脸','face','me','mirror'],'🤳'],
-    [['穿','ootd','outfit','衣','鞋','shoe','fit','wear','fashion','dress','jacket'],'👗'],
-    [['宠','pet','dog','cat','狗','猫','animal'],'🐾'],
-    [['Outdoor','outdoor','sky','天','sunset','山','海','beach','park','street','walk','tree','cloud'],'🌅'],
-    [['Daily','daily','work','desk','电脑','laptop','study','book','class'],'💻'],
-    [['Cozy','cozy','home','bed','sofa','room','sleep'],'🛋️'],
-    [['Sports','sport','gym','ball','run'],'⚽'],
-    [['Music','music','guitar','piano','song'],'🎵'],
-  ];
-  for(const [kws, em] of map){
-    if(kws.some(k => t.includes(k))) return em;
-  }
-  return '📷';
+function confirmTopic(){
+const el=document.getElementById('topic-confirm');if(!el.classList.contains('show'))return;
+el.classList.remove('show');
+const name=document.getElementById('tc-input').value.trim()||'Moments';
+if(name==='Moments'){uploadClip(null);}
+else{uploadClip(name);}
 }
-
-async function confirmClip(category){
-  console.log('[confirmClip] called, category:', category, 'blob:', capturedBlob?.size);
-  document.getElementById('confirm').classList.remove('show');document.getElementById('confirm').style.display='none';
-  if(!capturedBlob){ console.log('[confirmClip] NO BLOB!'); return; }
-
-  // Upload
-  const form=new FormData();
-  form.append('clip',capturedBlob,'clip.webm');
-  form.append('memberId',memberId);
-  form.append('thumb',capturedThumb||'');
-  if(category){form.append('category',category.name);form.append('emoji',category.emoji);}
-  const uploadRes = await fetch(`/api/crew/${crewId}/clip`,{method:'POST',body:form});
-  const uploadData = await uploadRes.json();
-  console.log('[confirmClip] upload response:', uploadData);
-
-  // Nudge crew if a category was picked
-  if(category){
-    await fetch(`/api/crew/${crewId}/nudge`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({memberId,category:category.name,emoji:category.emoji})});
-    toast(`saved ✓ — crew got: "show me your ${category.emoji}"`);
-  }else{
-    toast('saved ✓');
-  }
-  capturedBlob=null;capturedThumb=null;pendingCategory=null;
-  console.log('[confirmClip] done, refreshing feed');
-  setTimeout(refreshFeed, 500);
-}
-
-// ═══ NUDGE POLLING ═══
-function checkNudges(){
-  if(!crewId)return;
-  fetch(`/api/crew/${crewId}/nudges?since=${lastNudgeTs}`).then(r=>r.json()).then(d=>{
-    if(!d.nudges.length)return;
-    const n=d.nudges[d.nudges.length-1];
-    lastNudgeTs=n.ts;
-    if(n.from===myName)return; // don't show own nudges
-    document.getElementById('nudge-text').innerHTML=`<b>${n.from}</b> wants to see your <b>${n.emoji} ${n.category.toLowerCase()}</b>`;
-    document.getElementById('nudge').classList.add('show');
-    setTimeout(()=>document.getElementById('nudge').classList.remove('show'),5000);
-  });
-}
+function checkNudges(){if(!crewId)return;fetch('/api/crew/'+crewId+'/nudges?since='+lastNudgeTs).then(r=>r.json()).then(d=>{if(!d.nudges||!d.nudges.length)return;const n=d.nudges[d.nudges.length-1];lastNudgeTs=n.ts;if(n.fromId===memberId)return;document.getElementById('nudge').innerHTML='<b>'+n.fromName+'</b> filmed <b>'+(n.category||'something')+'</b> — wants to see yours!';document.getElementById('nudge').classList.add('show');setTimeout(()=>document.getElementById('nudge').classList.remove('show'),4000);});}
 function nudgeTap(){document.getElementById('nudge').classList.remove('show');openCamera();}
-
-// ═══ EXPORT: server-side ffmpeg composition ═══
-async function exportFilm(){
-  toast('composing your film...');
-  try{
-    const res = await fetch(`/api/crew/${crewId}/export`,{method:'POST'});
-    const data = await res.json();
-    if(data.videoUrl){
-      // Show in a simple overlay
-      const overlay = document.createElement('div');
-      overlay.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px;';
-      overlay.innerHTML=`
-        <div style="font-family:Anton,sans-serif;font-size:22px;color:var(--lime);">🎬 YOUR FILM</div>
-        <video src="${data.videoUrl}" controls autoplay playsinline loop style="width:100%;max-width:360px;border-radius:16px;border:2px solid rgba(199,241,65,.4);"></video>
-        <div style="display:flex;gap:10px;">
-          <a href="${data.videoUrl}" download="amingo_film.mp4" style="background:var(--lime);color:#000;font-weight:700;font-size:13px;padding:10px 20px;border-radius:18px;text-decoration:none;">⬇ save</a>
-          <button onclick="this.parentElement.parentElement.remove()" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);font-size:13px;padding:10px 20px;border-radius:18px;cursor:pointer;">close</button>
-        </div>`;
-      document.getElementById('app').appendChild(overlay);
-    } else {
-      toast(data.error || 'need more clips first');
-    }
-  }catch(e){toast('export failed');}
-}
-
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+// 点 clip 全屏放大播放，点背景关闭
+function zoomVideo(ev,v){ev.stopPropagation();const zv=document.getElementById('zoom-video');zv.src=v.currentSrc||v.src;document.getElementById('zoom').classList.add('show');const p=zv.play();if(p&&p.catch)p.catch(()=>{});}
+document.getElementById('zoom').addEventListener('click',e=>{if(e.target.id==='zoom'){e.currentTarget.classList.remove('show');document.getElementById('zoom-video').src='';}});
+// 主题确认浮层：回车确认；点背景空白 = 关闭并归 Moments(不丢素材)
+document.getElementById('tc-input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();confirmTopic();}});
+document.getElementById('topic-confirm').addEventListener('click',e=>{if(e.target.id==='topic-confirm'){e.currentTarget.classList.remove('show');uploadClip(null);}});
+// autoplay 兜底：首次用户手势解锁当前卡播放(iOS)
+document.addEventListener('click',()=>playOnlyCard(currentCard),{once:true});
+document.addEventListener('touchstart',()=>playOnlyCard(currentCard),{once:true,passive:true});
 </script>
 </body>
 </html>

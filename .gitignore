@@ -1,3 +1,7 @@
 node_modules
 uploads/
+thumbs/
+exports/
 .vercel
+crews.json
+excalidraw.log
