@@ -196,7 +196,7 @@ let lastExportUrl=null;
 function showExport(url){lastExportUrl=url;document.getElementById('ep-video').src=url;document.getElementById('ep-save').href=url;document.getElementById('export-preview').classList.add('show');}
 function closeExport(){document.getElementById('export-preview').classList.remove('show');document.getElementById('ep-video').src='';}
 // 分享：直链 = 当前导出视频的绝对地址，对方打开即播放/下载。优先系统分享面板，桌面端兜底复制
-function shareLink(){if(!lastExportUrl)return;const url=location.origin+lastExportUrl;if(navigator.share){navigator.share({title:'AMINGO',text:'check our crew clip',url}).catch(()=>{});}else{navigator.clipboard.writeText(url).then(()=>toast('link copied!')).catch(()=>prompt('share:',url));}}
+function shareLink(){if(!lastExportUrl)return;const url=location.origin+lastExportUrl;if(navigator.share){navigator.share({url}).catch(()=>{});}else{navigator.clipboard.writeText(url).then(()=>toast('link copied!')).catch(()=>prompt('share:',url));}}
 function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';}
 
 async function openCamera(){
