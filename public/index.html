@@ -104,7 +104,7 @@ html,body{height:100%;background:var(--ink);font-family:'Rubik',sans-serif;color
 <div id="main"><div id="topbar"><div id="logo">AM<span>I</span>NGO</div><div id="mix-btn" onclick="mixAll()">mix ▶</div><div id="invite-btn" onclick="shareCrew()">invite +</div></div><div id="swipe"><div id="cards"></div></div><div id="dots"></div><div id="bottombar"><div id="rec-btn" onclick="openCamera()"><div class="ri"></div></div></div></div>
 <div id="camera"><div id="cam-stage"><video id="cam-video" autoplay muted playsinline></video><div id="cam-fallback">📷</div><div id="cam-ghost"></div></div><div id="cam-close" onclick="closeCamera()">✕</div><div id="cam-flip" onclick="flipCamera()">🔄</div><div id="cam-rec"><div class="rec-dot"></div><div id="cam-timer">0:02</div></div><div id="cam-bottom"><div id="cam-upload" onclick="document.getElementById('file-input').click()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="M21 16l-5-5L5 22"/></svg></div><button id="cam-shutter" onclick="toggleRec()"></button><div style="width:42px"></div></div><div id="cam-hint">tap to film 2s</div><input type="file" id="file-input" accept="video/*"></div>
 <div id="nudge" onclick="nudgeTap()"></div>
-<div id="export-preview"><video id="ep-video" controls autoplay loop playsinline></video><div class="ep-actions"><button class="ep-btn ep-share" onclick="shareLink()">🔗 share</button><a id="ep-save" class="ep-btn ep-save" download="amingo.mp4">⬇ save</a><button class="ep-btn ep-close" onclick="closeExport()">close</button></div></div>
+<div id="export-preview"><video id="ep-video" controls autoplay loop playsinline></video><div class="ep-actions"><button class="ep-btn ep-share" onclick="shareLink()">🔗 share</button><button id="ep-save" class="ep-btn ep-save" onclick="saveVideo()">⬇ save</button><button class="ep-btn ep-close" onclick="closeExport()">close</button></div></div>
 <div id="topic-confirm"><input id="tc-input" maxlength="20" autocomplete="off" spellcheck="false"><div id="tc-hint">tap name to edit</div><button id="tc-btn" onclick="confirmTopic()">✓</button></div>
 <div id="zoom"><video id="zoom-video" loop playsinline webkit-playsinline controls></video></div>
 <div id="toast"></div>
@@ -197,7 +197,18 @@ toast('mixing all topics...');
 try{const r=await fetch('/api/crew/'+crewId+'/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});const d=await r.json();if(d.error){toast(d.error);return;}showExport(d.videoUrl);}catch(e){toast('export failed');}
 }
 let lastExportUrl=null;
-function showExport(url){lastExportUrl=url;document.getElementById('ep-video').src=url;document.getElementById('ep-save').href=url;document.getElementById('export-preview').classList.add('show');}
+function showExport(url){lastExportUrl=url;document.getElementById('ep-video').src=url;document.getElementById('export-preview').classList.add('show');}
+// 保存到相册：iOS 不支持 <a download>，改用 navigator.share 分享视频文件(面板里「存储视频」存相册)；桌面退回 blob 下载
+async function saveVideo(){
+  if(!lastExportUrl)return;
+  const url=location.origin+lastExportUrl;
+  try{
+    const blob=await (await fetch(url)).blob();
+    const file=new File([blob],'amingo.mp4',{type:'video/mp4'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return;}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='amingo.mp4';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }catch(e){toast('保存失败，可长按视频存相册');}
+}
 function closeExport(){document.getElementById('export-preview').classList.remove('show');document.getElementById('ep-video').src='';}
 // 分享：直链 = 当前导出视频的绝对地址，对方打开即播放/下载。优先系统分享面板，桌面端兜底复制
 function shareLink(){if(!lastExportUrl)return;const url=location.origin+lastExportUrl;if(navigator.share){navigator.share({url}).catch(()=>{});}else{navigator.clipboard.writeText(url).then(()=>toast('link copied!')).catch(()=>prompt('share:',url));}}
