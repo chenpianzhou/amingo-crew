@@ -1,11 +1,30 @@
 // ffmpeg 视频流水线：转码、分屏拼接、标题叠加（spawn 异步 + 串行锁 + 产物清理）
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { UPLOAD_DIR, newId, catKey } = require('./store');
 
-let ffmpegPath;
-try { ffmpegPath = require('ffmpeg-static'); } catch (e) { ffmpegPath = 'ffmpeg'; }
+// 选 ffmpeg：标题叠加要 drawtext。Debian apt 版含 drawtext；ffmpeg-static 的 linux 静态版(johnvansickle)不含。
+// 策略：优先选「含 drawtext 且可用」的（系统优先），否则退到首个可用的（标题会被跳过而非报错）。
+function ffmpegDrawtext(bin) {
+  try { return /\bdrawtext\b/.test(execFileSync(bin, ['-hide_banner', '-filters'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString()); }
+  catch (e) { return null; } // null = 该二进制不可用
+}
+let ffmpegPath, HAS_DRAWTEXT = false;
+{
+  let staticPath = null;
+  try { staticPath = require('ffmpeg-static'); } catch (e) {}
+  const candidates = ['ffmpeg', staticPath].filter(Boolean); // 系统优先，静态兜底
+  let firstAvail = null;
+  for (const c of candidates) {
+    const dt = ffmpegDrawtext(c);
+    if (dt === null) continue;
+    if (!firstAvail) firstAvail = c;
+    if (dt === true) { ffmpegPath = c; HAS_DRAWTEXT = true; break; }
+  }
+  if (!ffmpegPath) ffmpegPath = firstAvail || 'ffmpeg';
+  console.log('[ffmpeg] using=' + ffmpegPath + ' drawtext=' + HAS_DRAWTEXT);
+}
 
 const W = 1080, H = 1920, SEG = 2; // 输出尺寸 + 每段固定 2s
 const CLIP_CAP = 8;                // 单主题最多并排 8 格
@@ -26,7 +45,12 @@ function run(args) {
     const timer = setTimeout(() => { try { p.kill('SIGKILL'); } catch (e) {} reject(new Error('ffmpeg timeout')); }, 60000);
     p.stderr.on('data', d => { err += d; });
     p.on('error', e => { clearTimeout(timer); reject(e); });
-    p.on('close', code => { clearTimeout(timer); code === 0 ? resolve() : reject(new Error(err.slice(-400) || 'ffmpeg exit ' + code)); });
+    p.on('close', (code, signal) => {
+      clearTimeout(timer);
+      if (code === 0) return resolve();
+      console.error('[ffmpeg] FAIL code=' + code + ' signal=' + signal + '\nstderr:\n' + err.slice(-1500)); // 诊断：信号(SIGKILL=OOM) + 完整报错
+      reject(new Error(err.slice(-300) || ('ffmpeg exit ' + code + ' signal ' + signal)));
+    });
   });
 }
 
@@ -34,7 +58,7 @@ function run(args) {
 function safeTitle(s) { return (s || '').replace(/[^A-Za-z0-9 ]/g, '').trim().slice(0, 24) || 'Topic'; }
 
 function drawtextChain(inLabel, title, outLabel) {
-  if (!FONT) return `[${inLabel}]copy[${outLabel}]`; // 无字体则不叠标题，不报错
+  if (!FONT || !HAS_DRAWTEXT) return `[${inLabel}]copy[${outLabel}]`; // 无字体/无 drawtext 则不叠标题，不报错
   const t = safeTitle(title).replace(/ /g, '\\ ');
   return `[${inLabel}]drawtext=fontfile='${FONT}':text='${t}':fontcolor=white:fontsize=46:box=1:boxcolor=black@0.55:boxborderw=18:x=(w-text_w)/2:y=h-120[${outLabel}]`;
 }
@@ -53,7 +77,7 @@ function transcode(rawPath) {
   return new Promise((resolve, reject) => {
     if (rawPath.endsWith('.mp4')) return resolve(path.basename(rawPath));
     const mp4 = rawPath.replace(/\.\w+$/, '.mp4');
-    run(['-y', '-v', 'error', '-i', rawPath, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', mp4])
+    run(['-y', '-v', 'error', '-i', rawPath, '-threads', '1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', mp4])
       .then(() => {
         if (!fs.existsSync(mp4)) return reject(new Error('transcode produced no file'));
         try { fs.unlinkSync(rawPath); } catch (e) {}
@@ -89,7 +113,7 @@ async function buildSegment(clips, title, segFile) {
     fc = scales.join(';') + ';' + parts.join('') + `vstack=inputs=${n}[base];` + drawtextChain('base', title, 'v');
   }
   await run(['-y', '-v', 'error', ...inputs, '-filter_complex', fc, '-map', '[v]', '-t', String(SEG),
-    '-an', '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', segFile]);
+    '-an', '-threads', '1', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', segFile]);
 }
 
 // 同一成员同一主题的多条 clip → 横向并排(hstack)成一条，最多 3 条；单格竖版 480x640
@@ -107,14 +131,14 @@ async function stitchHorizontal(files, outFile) {
   }
   const fc = scales.join(';') + ';' + parts.join('') + `hstack=inputs=${n}[v]`;
   await run(['-y', '-v', 'error', ...inputs, '-filter_complex', fc, '-map', '[v]', '-t', String(SEG),
-    '-an', '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', outFile]);
+    '-an', '-threads', '1', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', outFile]);
 }
 
 // 单条全屏段（Moments，无标题）
 async function buildFullScreen(clip, segFile) {
   await run(['-y', '-v', 'error', '-t', String(SEG), '-i', path.join(UPLOAD_DIR, clip.file),
     '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,fps=30,format=yuv420p`,
-    '-an', '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', '-t', String(SEG), segFile]);
+    '-an', '-threads', '1', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-t', String(SEG), segFile]);
 }
 
 // 保留该 crew 最近 KEEP_EXPORTS 个导出产物（分享链接直指这些文件，留几个防一导出就失效），更老的删掉
@@ -183,7 +207,7 @@ async function _doExport(crew, targetCategory) {
       fs.writeFileSync(listFile, segments.map(s => `file '${s}'`).join('\n'));
       // concat 阶段重编码，保证参数一致防错乱
       await run(['-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', listFile,
-        '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', '-an', outFile]);
+        '-threads', '1', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', outFile]);
       try { fs.unlinkSync(listFile); } catch (e) {}
     }
     const base = path.basename(outFile);
