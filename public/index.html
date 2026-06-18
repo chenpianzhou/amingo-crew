@@ -207,7 +207,7 @@ async function saveVideo(){
     const file=new File([blob],'amingo.mp4',{type:'video/mp4'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return;}
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='amingo.mp4';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  }catch(e){toast('保存失败，可长按视频存相册');}
+  }catch(e){toast('save failed — long-press the video to save');}
 }
 function closeExport(){document.getElementById('export-preview').classList.remove('show');document.getElementById('ep-video').src='';}
 // 分享：直链 = 当前导出视频的绝对地址，对方打开即播放/下载。优先系统分享面板，桌面端兜底复制
