@@ -11,8 +11,9 @@ const PORT = process.env.PORT || 3456;
 app.use(express.json({ limit: '15mb' }));
 app.use((req, res, next) => { if (req.body == null) req.body = {}; next(); }); // express5: 无 body 兜底为 {}，避免解构崩溃
 app.use(express.static('public', { etag: false, maxAge: 0 }));
-app.use('/uploads', express.static(store.UPLOAD_DIR, { etag: false, maxAge: 0 }));
-app.use('/thumbs', express.static(store.THUMB_DIR, { etag: false, maxAge: 0 }));
+// 视频/缩略图文件名唯一不可变(新内容=新文件名)，可长缓存 → 切卡/回看不再重下，减少黑屏卡顿
+app.use('/uploads', express.static(store.UPLOAD_DIR, { maxAge: '30d', immutable: true }));
+app.use('/thumbs', express.static(store.THUMB_DIR, { maxAge: '30d', immutable: true }));
 app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
 const upload = multer({

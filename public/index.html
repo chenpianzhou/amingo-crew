@@ -120,7 +120,7 @@ html,body{height:100%;background:var(--ink);font-family:'Rubik',sans-serif;color
  * 已验证：全路由 curl + 完整流水线(webm转码→2路分屏+标题→导出 1080x1920/h264/2.00s)
  * 待真机：iOS 实机并行播放、autoplay 兜底、drawtext 文字像素
  * ──────────────────────────────────────────────────────── */
-let crewId=null,memberId=null,myName='',camStream=null,recorder=null,chunks=[],isRecording=false,recTimer=null,recInterval=null,capturedBlob=null,capturedThumb=null,quickTopic=null,facingMode='user',currentCard=0,pollTimer=null,lastNudgeTs=0,existingCategories=new Set();
+let crewId=null,memberId=null,myName='',camStream=null,recorder=null,chunks=[],isRecording=false,recTimer=null,recInterval=null,capturedBlob=null,capturedThumb=null,quickTopic=null,facingMode='user',currentCard=0,pollTimer=null,lastNudgeTs=0,existingCategories=new Set(),lastCardsSig=null;
 const saved={c:localStorage.getItem('amingo_crew'),m:localStorage.getItem('amingo_member'),n:localStorage.getItem('amingo_name')};
 const joinMatch=location.pathname.match(/^\/join\/(\w+)/);
 if(saved.c&&saved.m&&!joinMatch){crewId=saved.c;memberId=saved.m;myName=saved.n||'me';enterApp();}
@@ -142,6 +142,10 @@ if(!data)return;
 const members=data.members,grouped={},moments=[],stitches=data.stitches||{};
 data.clips.forEach(c=>{if(c.category)(grouped[c.category]=grouped[c.category]||{clips:[]}).clips.push(c);else moments.push(c);});
 existingCategories=new Set(Object.keys(grouped).map(k=>k.toLowerCase()));
+// 渲染签名：成员/clip/拼接 真变化才重建 DOM；否则跳过，避免每 4s 轮询重建视频元素导致黑屏卡顿
+const sig=members.map(m=>m.id+':'+m.name).join(',')+'|'+data.clips.map(c=>c.id+c.memberId+(c.category||'')+c.videoUrl).join(',')+'|'+JSON.stringify(stitches);
+if(sig===lastCardsSig)return; // 无变化：保持现有视频继续播放
+lastCardsSig=sig;
 const container=document.getElementById('cards');
 let html='';
 Object.entries(grouped).forEach(([cat,{clips}])=>{
